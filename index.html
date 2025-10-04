@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>URTECH DESPACHANTES</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'primary': '#0D47A1',
+              'primary-dark': '#0B3B84',
+              'secondary': '#FFC107',
+              'light-bg': '#F7FAFC',
+              'dark-text': '#1A202C',
+              'medium-text': '#4A5568',
+              'light-text': '#718096',
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      .btn-hover {
+        padding: 12px 24px;
+        background-color: #0D47A1; /* primary color */
+        color: white;
+        border: none;
+        border-radius: 0.5rem; /* matches rounded-lg */
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        font-weight: 600;
+      }
+
+      .btn-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        background-color: #0B3B84; /* primary-dark color */
+      }
+
+      .btn-scale {
+        padding: 12px 24px;
+        background-color: #28a745; /* green */
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        font-weight: 600;
+      }
+
+      .btn-scale:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+      }
+      
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #report-content, #report-content * {
+          visibility: visible;
+        }
+        #report-content {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          padding: 1rem;
+        }
+        .no-print {
+          display: none;
+        }
+        .printable-card {
+           box-shadow: none !important;
+           border: 1px solid #e2e8f0;
+        }
+        .printable-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .printable-table th, .printable-table td {
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: left;
+        }
+        .printable-table th {
+          background-color: #f2f2f2;
+        }
+      }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-light-bg font-sans">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
