@@ -49,7 +49,8 @@ const Services: React.FC = () => {
         setIsModalOpen(false);
 
         // --- Financial Integration ---
-        const client = mockClients.find(c => c.name === newService.clientName);
+        const transactionClientId = newService.payerClientId || mockClients.find(c => c.name === newService.clientName)?.id;
+        
         const newTransactionData: Omit<Transaction, 'id'> = {
             description: `Serviço: ${newService.name} - ${newService.vehiclePlate}`,
             category: 'Receita de Serviço',
@@ -59,7 +60,7 @@ const Services: React.FC = () => {
             status: TransactionStatus.PENDING,
             dueDate: newService.dueDate,
             serviceId: newService.id,
-            clientId: client?.id,
+            clientId: transactionClientId,
         };
         // Dispatch a custom event to be caught by the Financial page
         const event = new CustomEvent('transactionAdded', { detail: newTransactionData });
@@ -98,6 +99,11 @@ const Services: React.FC = () => {
                                     <td className="p-4">
                                         <div>{service.clientName}</div>
                                         <div className="text-sm text-gray-500">{service.vehiclePlate}</div>
+                                        {service.payerClientName && service.payerClientName !== service.clientName && (
+                                            <div className="text-xs text-blue-600 font-semibold mt-1">
+                                                Pagador: {service.payerClientName}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(service.status)}`}>

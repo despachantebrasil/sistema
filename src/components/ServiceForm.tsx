@@ -16,6 +16,8 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
     const [vehicleId, setVehicleId] = useState<number | ''>('');
     const [price, setPrice] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
+    const [isPayerSameAsClient, setIsPayerSameAsClient] = useState(true);
+    const [payerClientId, setPayerClientId] = useState<number | ''>('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,6 +34,19 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
             return;
         }
 
+        let finalPayerClientId: number | undefined = client.id;
+        let finalPayerClientName: string | undefined = client.name;
+
+        if (!isPayerSameAsClient) {
+            const payerClient = clients.find(c => c.id === Number(payerClientId));
+            if (!payerClient) {
+                alert('Pagador inválido selecionado.');
+                return;
+            }
+            finalPayerClientId = payerClient.id;
+            finalPayerClientName = payerClient.name;
+        }
+
         onSave({
             name: serviceName,
             clientName: client.name,
@@ -39,6 +54,8 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
             status: ServiceStatus.TODO,
             price: parseFloat(price),
             dueDate,
+            payerClientId: finalPayerClientId,
+            payerClientName: finalPayerClientName,
         });
     };
     
@@ -66,7 +83,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                 </select>
             </div>
             <div>
-                <label htmlFor="client" className="block text-sm font-medium text-gray-700">Cliente</label>
+                <label htmlFor="client" className="block text-sm font-medium text-gray-700">Cliente (Proprietário do Veículo)</label>
                 <select
                     id="client"
                     value={clientId}
@@ -99,7 +116,41 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                     ))}
                 </select>
             </div>
-             <div className="grid grid-cols-2 gap-4">
+
+            <div className="pt-2">
+                <div className="flex items-center">
+                    <input
+                        id="payer-checkbox"
+                        type="checkbox"
+                        checked={isPayerSameAsClient}
+                        onChange={(e) => setIsPayerSameAsClient(e.target.checked)}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                    <label htmlFor="payer-checkbox" className="ml-2 block text-sm text-gray-900">
+                        O pagador é o mesmo que o cliente
+                    </label>
+                </div>
+            </div>
+
+            {!isPayerSameAsClient && (
+                <div>
+                    <label htmlFor="payer" className="block text-sm font-medium text-gray-700">Pagador do Serviço</label>
+                    <select
+                        id="payer"
+                        value={payerClientId}
+                        onChange={(e) => setPayerClientId(Number(e.target.value))}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                        required
+                    >
+                        <option value="" disabled>Selecione um pagador</option>
+                        {clients.map((c: Client) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
+             <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>
                     <label htmlFor="price" className="block text-sm font-medium text-gray-700">Preço (R$)</label>
                     <input
