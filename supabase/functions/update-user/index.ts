@@ -51,20 +51,24 @@ serve(async (req) => {
     }
 
     // 3. Busca e retorna o perfil atualizado para a UI
-    const { data: updatedProfile, error: fetchError } = await supabaseAdmin
-        .from('user_profiles_view')
-        .select('id, full_name, role, email, avatar_url')
+    // Nota: user_profiles_view não existe mais, vamos buscar diretamente o perfil e o email do auth.users
+    const { data: userAuth, error: fetchAuthError } = await supabaseAdmin.auth.admin.getUserById(user_id);
+    if (fetchAuthError) throw fetchAuthError;
+
+    const { data: userProfile, error: fetchProfileError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, role, avatar_url')
         .eq('id', user_id)
         .single();
     
-    if (fetchError) throw fetchError;
+    if (fetchProfileError) throw fetchProfileError;
 
     const responseUser = {
-        id: updatedProfile.id,
-        fullName: updatedProfile.full_name,
-        email: updatedProfile.email,
-        role: updatedProfile.role,
-        avatarUrl: updatedProfile.avatar_url,
+        id: userProfile.id,
+        fullName: userProfile.full_name,
+        email: userAuth.user.email,
+        role: userProfile.role,
+        avatarUrl: userProfile.avatar_url,
     };
 
     return new Response(JSON.stringify({ message: 'Usuário atualizado com sucesso', user: responseUser }), {

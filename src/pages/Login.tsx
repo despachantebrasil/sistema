@@ -19,7 +19,7 @@ const Login: React.FC = () => {
           providers={[]}
           theme="light"
           view="sign_in"
-          showLinks={false}
+          showLinks={true}
           localization={{
             variables: {
               sign_in: {
@@ -29,10 +29,18 @@ const Login: React.FC = () => {
                 password_input_placeholder: 'Sua senha',
                 button_label: 'Entrar',
                 social_provider_text: 'Entrar com {{provider}}',
+                link_text: 'Já tem uma conta? Entre',
+              },
+              sign_up: {
+                email_label: 'Endereço de e-mail',
+                password_label: 'Crie uma senha',
+                email_input_placeholder: 'Seu e-mail',
+                password_input_placeholder: 'Sua senha',
+                button_label: 'Cadastrar',
+                link_text: 'Não tem uma conta? Cadastre-se',
               },
               forgotten_password: {
                 email_label: 'Endereço de e-mail',
-                password_label: 'Sua senha',
                 email_input_placeholder: 'Seu e-mail',
                 button_label: 'Enviar instruções',
                 link_text: 'Esqueceu sua senha?',

@@ -44,6 +44,7 @@ export const createUserWithProfile = async (
 
     if (avatarFile) {
         const filePath = `${user.id}/${Date.now()}_${avatarFile.name}`;
+        // Nota: O bucket 'avatars' deve ser criado manualmente no Supabase Storage.
         const { error: uploadError } = await supabase.storage
             .from('avatars')
             .upload(filePath, avatarFile);
@@ -55,6 +56,7 @@ export const createUserWithProfile = async (
                 .from('avatars')
                 .getPublicUrl(filePath);
             finalAvatarUrl = publicUrl;
+            // Atualiza o perfil com a URL pública do avatar
             await supabase.from('profiles').update({ avatar_url: finalAvatarUrl }).eq('id', user.id);
         }
     }
@@ -88,6 +90,7 @@ export const updateUserWithProfile = async (
 
     if (avatarFile) {
         const filePath = `${userId}/${Date.now()}_${avatarFile.name}`;
+        // Nota: O bucket 'avatars' deve ser criado manualmente no Supabase Storage.
         const { error: uploadError } = await supabase.storage
             .from('avatars')
             .upload(filePath, avatarFile, { upsert: true });
@@ -121,5 +124,5 @@ export const updateUserWithProfile = async (
         return { user: null, error };
     }
 
-    return { user: data.user, error: null };
+    return { user: data.user as AppUser, error: null };
 };

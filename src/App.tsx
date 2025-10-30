@@ -1,7 +1,9 @@
 import React, { useState, Suspense } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import type { Page, Role } from './types';
+import Login from './pages/Login';
+import { useAuth } from './components/SessionProvider';
+import type { Page } from './types';
 
 // Importações de Páginas
 import Dashboard from './pages/Dashboard';
@@ -12,43 +14,22 @@ import Financial from './pages/Financial';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 
-// Definindo tipos mínimos para simular Session e User
-interface MockUser {
-  id: string;
-  email: string;
-  user_metadata: {
-    full_name: string;
-    role: Role;
-  };
-}
-
-interface MockSession {
-    access_token: string;
-    user: MockUser;
-}
-
-// Usuário mockado padrão
-const MOCK_USER: MockUser = {
-  id: 'mock-admin-id',
-  email: 'admin@mock.com',
-  user_metadata: {
-    full_name: 'Admin Mock',
-    role: 'Administrador',
-  },
-};
-
-const MOCK_SESSION: MockSession = {
-    access_token: 'mock-token',
-    user: MOCK_USER,
-};
-
 const App: React.FC = () => {
-  // Agora, a sessão é sempre o mock
-  const session: MockSession = MOCK_SESSION;
+  const { session, isLoading, userRole, userAvatarUrl } = useAuth();
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
-  const userRole: Role = MOCK_USER.user_metadata.role;
-  const userAvatarUrl: string = `https://ui-avatars.com/api/?name=${encodeURIComponent(MOCK_USER.user_metadata.full_name as string)}&background=0D47A1&color=fff`;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-light-bg">
+        <p className="text-xl text-primary">Carregando autenticação...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Login />;
+  }
 
   const renderPage = (page: Page) => {
       switch (page) {
@@ -91,7 +72,7 @@ const App: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden no-print">
         <Header 
           title={pageTitles[currentPage]} 
-          session={session as any} // Cast para evitar erros de tipo, já que removemos o tipo Session real
+          session={session}
           onMenuClick={() => setIsSidebarOpen(true)}
           avatarUrl={userAvatarUrl}
         />

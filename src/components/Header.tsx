@@ -3,8 +3,9 @@ import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, Lo
 import { mockClients } from '../data/mockData';
 import { mockVehicles } from '../data/mockData';
 import type { AlertItem, AlertStatus } from '../types';
-import type { Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
+import { useAuth } from './SessionProvider';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -38,6 +39,7 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const alertsRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { userRole } = useAuth(); // Usamos o useAuth para obter o role atualizado
 
   const alerts: AlertItem[] = useMemo(() => {
     const allAlerts: AlertItem[] = [];
@@ -99,7 +101,7 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
 
   const user = session.user;
   const fullName = user?.user_metadata?.full_name || 'Usuário';
-  const role = user?.user_metadata?.role || 'Despachante';
+  const role = userRole; // Usar o role do contexto para garantir que está atualizado
   const avatarUrl = userAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName as string)}&background=0D47A1&color=fff`;
 
   return (

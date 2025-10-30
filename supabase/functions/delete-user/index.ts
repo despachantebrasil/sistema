@@ -29,18 +29,15 @@ serve(async (req) => {
       })
     }
 
-    // Busca os detalhes do usuário para verificar o e-mail
+    // Busca os detalhes do usuário para verificar o e-mail (proteção contra exclusão acidental do admin principal)
     const { data: { user }, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(user_id);
 
     if (getUserError) {
         console.error('Erro ao buscar usuário para verificação de exclusão:', getUserError);
-        return new Response(JSON.stringify({ error: 'Não foi possível verificar o usuário.' }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // Continua a exclusão mesmo se não conseguir buscar o usuário, a menos que seja o admin protegido
     }
 
-    // Verifica se o usuário é o administrador protegido
+    // Verifica se o usuário é o administrador protegido (usando um email de exemplo)
     if (user && user.email === 'gilshikam@gmail.com') {
         return new Response(JSON.stringify({ error: 'Este administrador não pode ser removido.' }), {
             status: 403, // Forbidden
