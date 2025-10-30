@@ -1,6 +1,4 @@
-// @ts-ignore
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-// @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const corsHeaders = {
@@ -8,17 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // @ts-ignore
     const supabaseAdmin = createClient(
-      // @ts-ignore
       Deno.env.get('SUPABASE_URL') ?? '',
-      // @ts-ignore
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
@@ -78,7 +73,7 @@ serve(async (req: Request) => {
 
   } catch (e) {
     console.error('Erro inesperado:', e)
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
+    return new Response(JSON.stringify({ error: e.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }

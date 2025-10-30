@@ -23,12 +23,20 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const extractProfileFromSession = (currentSession: Session | null) => {
-    if (currentSession?.user) {
-      const role = currentSession.user.user_metadata?.role as Role || 'Usuário';
-      const avatarUrl = currentSession.user.user_metadata?.avatar_url as string || null;
-      setUserRole(role);
-      setUserAvatarUrl(avatarUrl);
+  const fetchUserProfile = async (userId: string) => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('role, avatar_url')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      setUserRole('Usuário');
+      setUserAvatarUrl(null);
+    } else if (profile) {
+      setUserRole(profile.role as Role);
+      setUserAvatarUrl(profile.avatar_url);
     } else {
       setUserRole('Usuário');
       setUserAvatarUrl(null);
@@ -37,20 +45,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      extractProfileFromSession(session);
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      }
       setLoading(false);
     });
-
-    // Verifica a sessão inicial imediatamente
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-        setSession(initialSession);
-        extractProfileFromSession(initialSession);
-        setLoading(false);
-    });
-
 
     return () => {
       subscription?.unsubscribe();
@@ -89,7 +90,7 @@ const App: React.FC = () => {
   }
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center text-xl font-semibold text-primary">Carregando dados de autenticação...</div>;
+    return <div className="flex h-screen items-center justify-center">Carregando...</div>;
   }
 
   if (!session) {

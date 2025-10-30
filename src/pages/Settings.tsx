@@ -81,7 +81,6 @@ const UserForm: React.FC<{
                     onSave(user, false);
                 }
             }
-            onCancel();
         } catch (err: any) {
             alert(`Erro ao salvar usuário: ${err.message}`);
             setIsLoading(false);
@@ -145,29 +144,22 @@ const UsersTab: React.FC = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             setLoading(true);
-            try {
-                const { data, error } = await supabase.from('user_profiles_view').select('id, full_name, role, email, avatar_url');
-                
-                if (error) {
-                    console.error('Error fetching users:', error);
-                    // Não alertar o usuário, apenas registrar e continuar com lista vazia
-                    setUsers([]);
-                } else {
-                    const formattedUsers = data.map((profile: any) => ({
-                        id: profile.id,
-                        fullName: profile.full_name,
-                        email: profile.email,
-                        role: profile.role,
-                        avatarUrl: profile.avatar_url,
-                    }));
-                    setUsers(formattedUsers);
-                }
-            } catch (e) {
-                console.error('Unexpected error during user fetch:', e);
-                setUsers([]);
-            } finally {
-                setLoading(false);
+            const { data, error } = await supabase.from('user_profiles_view').select('id, full_name, role, email, avatar_url');
+            
+            if (error) {
+                console.error('Error fetching users:', error);
+                alert('Não foi possível carregar os usuários.');
+            } else {
+                const formattedUsers = data.map((profile: any) => ({
+                    id: profile.id,
+                    fullName: profile.full_name,
+                    email: profile.email,
+                    role: profile.role,
+                    avatarUrl: profile.avatar_url,
+                }));
+                setUsers(formattedUsers);
             }
+            setLoading(false);
         };
 
         fetchUsers();
@@ -260,9 +252,6 @@ const UsersTab: React.FC = () => {
                                     </td>
                                 </tr>
                             ))
-                        )}
-                        {!loading && users.length === 0 && (
-                            <tr><td colSpan={4} className="text-center p-8 text-gray-500">Nenhum usuário encontrado ou erro ao carregar.</td></tr>
                         )}
                     </tbody>
                 </table>
