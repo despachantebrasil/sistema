@@ -2,7 +2,10 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, LogOutIcon } from './Icons';
 import { mockClients } from '../data/mockData';
 import { mockVehicles } from '../data/mockData';
-import type { AlertItem, AlertStatus, Role } from '../types';
+import type { AlertItem, AlertStatus } from '../types';
+import { Session } from '@supabase/supabase-js';
+import { supabase } from '../integrations/supabase/client';
+import { useAuth } from './SessionProvider';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -26,8 +29,7 @@ const getAlertStatus = (dateString: string | undefined): AlertStatus => {
 
 interface HeaderProps {
   title: string;
-  // Usamos 'any' ou um tipo mockado, pois a sessão real não é mais usada
-  session: any; 
+  session: Session;
   onMenuClick: () => void;
   avatarUrl: string | null;
 }
@@ -37,9 +39,7 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const alertsRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  // Usamos valores mockados diretamente
-  const userRole: Role = session.user.user_metadata.role; 
+  const { userRole } = useAuth(); // Usamos o useAuth para obter o role atualizado
 
   const alerts: AlertItem[] = useMemo(() => {
     const allAlerts: AlertItem[] = [];
@@ -95,15 +95,13 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
     return null;
   }
 
-  // Ação de logout mockada
-  const handleLogout = () => {
-    alert('Logout desativado. O aplicativo está rodando em modo de demonstração.');
-    // Em um ambiente real, você faria: await supabase.auth.signOut();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   const user = session.user;
   const fullName = user?.user_metadata?.full_name || 'Usuário';
-  const role = userRole; 
+  const role = userRole; // Usar o role do contexto para garantir que está atualizado
   const avatarUrl = userAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName as string)}&background=0D47A1&color=fff`;
 
   return (
@@ -176,7 +174,7 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
                 <LogOutIcon className="w-4 h-4 mr-2" />
-                Sair (Demo)
+                Sair
               </button>
             </div>
           )}
