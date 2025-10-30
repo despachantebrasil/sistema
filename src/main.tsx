@@ -1,12 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { supabase } from './integrations/supabase/client';
-import { SessionProvider } from './components/SessionProvider';
+import { AuthProvider } from './components/AuthProvider';
 
-// Limpa qualquer sessão persistente do Supabase para garantir que o modo de demonstração seja limpo.
-// Isso é importante para remover tokens JWT antigos do cache do navegador.
-supabase.auth.signOut();
+// Limpa o armazenamento local para garantir um estado limpo, já que não usamos mais o Supabase para persistência.
 localStorage.clear();
 sessionStorage.clear();
 
@@ -18,8 +15,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <SessionProvider>
+    <AuthProvider>
       <App />
-    </SessionProvider>
+    </AuthProvider>
   </React.StrictMode>
 );

@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
-import { initialPermissions, mockCompanyProfile } from '../data/mockData';
+import { initialPermissions, mockCompanyProfile, mockUsers } from '../data/mockData';
 import type { AppUser, Role, PermissionsMap, CompanyProfile, Page } from '../types';
 import { PlusIcon, EditIcon, TrashIcon, CameraIcon } from '../components/Icons';
-import { createUserWithProfile, updateUserWithProfile, fetchAllUsers } from '../services/supabase';
-import { supabase } from '../integrations/supabase/client';
 
 type SettingsTab = 'users' | 'permissions' | 'company';
 
@@ -25,68 +23,39 @@ const UserForm: React.FC<{
     onCancel: () => void,
     editingUser?: AppUser | null 
 }> = ({ onSave, onCancel, editingUser }) => {
-    const [fullName, setFullName] = useState('');
-    const [email, setEmail] = useState('');
+    const [fullName, setFullName] = useState(editingUser?.fullName || '');
+    const [email, setEmail] = useState(editingUser?.email || '');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState<Role>('Usuário');
-    const [avatarFile, setAvatarFile] = useState<File | null>(null);
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [role, setRole] = useState<Role>(editingUser?.role || 'Usuário');
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(editingUser?.avatarUrl || null);
     
     const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
-
-    useEffect(() => {
-        if (editingUser) {
-            setFullName(editingUser.fullName);
-            setEmail(editingUser.email);
-            setRole(editingUser.role);
-            setAvatarPreview(editingUser.avatarUrl || null);
-        }
-    }, [editingUser]);
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            setAvatarFile(file);
             const previewUrl = URL.createObjectURL(file);
             setAvatarPreview(previewUrl);
+            // Nota: No modo mockado, não fazemos upload real do arquivo.
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
-
-        try {
-            if (editingUser) {
-                const { user, error } = await updateUserWithProfile(
-                    editingUser.id,
-                    { fullName, email, role, avatarUrl: editingUser.avatarUrl },
-                    password || null,
-                    avatarFile
-                );
-                if (error) throw error;
-                if (user) {
-                    onSave(user, true);
-                }
-            } else {
-                const { user, error } = await createUserWithProfile(
-                    email,
-                    password,
-                    { fullName, role },
-                    avatarFile
-                );
-                if (error) throw error;
-                if (user) {
-                    onSave(user, false);
-                }
-            }
-            setIsLoading(false);
-            onCancel();
-        } catch (err: any) {
-            alert(`Erro ao salvar usuário: ${err.message}`);
-            setIsLoading(false);
+        if (!fullName || !email || !role) {
+            alert('Por favor, preencha todos os campos obrigatórios.');
+            return;
         }
+
+        const mockUser: AppUser = {
+            id: editingUser?.id || `mock-${Date.now()}`,
+            fullName,
+            email,
+            role,
+            avatarUrl: avatarPreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random&color=fff`,
+        };
+        
+        onSave(mockUser, !!editingUser);
     };
 
     return (
@@ -119,7 +88,7 @@ const UserForm: React.FC<{
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Senha</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={editingUser ? "Deixe em branco para não alterar" : "Mínimo 6 caracteres"} className={inputClasses} minLength={editingUser ? undefined : 6} />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={editingUser ? "Deixe em branco para não alterar" : "Mínimo 6 caracteres"} className={inputClasses} minLength={editingUser ? undefined : 6} disabled={!!editingUser} />
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Perfil de Acesso</label>
@@ -131,38 +100,16 @@ const UserForm: React.FC<{
             </div>
             <div className="flex justify-end space-x-3 pt-4 border-t">
                 <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancelar</button>
-                <button type="submit" className="btn-scale" disabled={isLoading}>{isLoading ? 'Salvando...' : 'Salvar'}</button>
+                <button type="submit" className="btn-scale">Salvar</button>
             </div>
         </form>
     );
 };
 
 const UsersTab: React.FC = () => {
-    const [users, setUsers] = useState<AppUser[]>([]);
+    const [users, setUsers] = useState<AppUser[]>(mockUsers);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<AppUser | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const loadUsers = async () => {
-            setLoading(true);
-            const { users: fetchedUsers, error } = await fetchAllUsers();
-            
-            if (error) {
-                console.error('Error fetching users:', error);
-                alert(`Não foi possível carregar os usuários: ${error.message}`);
-                setLoading(false);
-                return;
-            }
-            
-            if (fetchedUsers) {
-                setUsers(fetchedUsers);
-            }
-            setLoading(false);
-        };
-
-        loadUsers();
-    }, []);
 
     const handleOpenModal = (user: AppUser | null) => {
         setEditingUser(user);
@@ -181,24 +128,15 @@ const UsersTab: React.FC = () => {
             setUsers(prev => [savedUser, ...prev]);
         }
         handleCloseModal();
+        alert(`Usuário ${isEditing ? 'atualizado' : 'adicionado'} com sucesso (Mockado).`);
     };
 
-    const handleDeleteUser = async (userId: string, userName: string) => {
-        if (!window.confirm(`Tem certeza que deseja excluir o usuário "${userName}"? Esta ação não pode ser desfeita.`)) {
+    const handleDeleteUser = (userId: string, userName: string) => {
+        if (!window.confirm(`Tem certeza que deseja excluir o usuário "${userName}"? (Ação Mockada)`)) {
             return;
         }
-
-        const { error } = await supabase.functions.invoke('delete-user', {
-            body: { user_id: userId },
-        });
-
-        if (error) {
-            console.error('Error deleting user:', error);
-            alert(`Não foi possível excluir o usuário: ${error.message}`);
-        } else {
-            setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-            alert('Usuário excluído com sucesso.');
-        }
+        setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+        alert('Usuário excluído com sucesso (Mockado).');
     };
 
     return (
@@ -221,36 +159,32 @@ const UsersTab: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {loading ? (
-                            <tr><td colSpan={4} className="text-center p-8">Carregando usuários...</td></tr>
-                        ) : (
-                            users.map(user => (
-                                <tr key={user.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4 font-medium flex items-center">
-                                        <img 
-                                            src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}`} 
-                                            alt={user.fullName} 
-                                            className="w-10 h-10 rounded-full mr-4 object-cover" 
-                                        />
-                                        {user.fullName}
-                                    </td>
-                                    <td className="p-4">{user.email}</td>
-                                    <td className="p-4">{user.role}</td>
-                                    <td className="p-4 space-x-2 flex items-center">
-                                        <button onClick={() => handleOpenModal(user)} className="text-primary p-1 hover:bg-gray-200 rounded-full">
-                                            <EditIcon className="w-4 h-4" />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteUser(user.id, user.fullName)} 
-                                            className={`p-1 rounded-full text-red-500 hover:bg-gray-200`}
-                                            title={'Excluir usuário'}
-                                        >
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
+                        {users.map(user => (
+                            <tr key={user.id} className="border-b hover:bg-gray-50">
+                                <td className="p-4 font-medium flex items-center">
+                                    <img 
+                                        src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}`} 
+                                        alt={user.fullName} 
+                                        className="w-10 h-10 rounded-full mr-4 object-cover" 
+                                    />
+                                    {user.fullName}
+                                </td>
+                                <td className="p-4">{user.email}</td>
+                                <td className="p-4">{user.role}</td>
+                                <td className="p-4 space-x-2 flex items-center">
+                                    <button onClick={() => handleOpenModal(user)} className="text-primary p-1 hover:bg-gray-200 rounded-full">
+                                        <EditIcon className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDeleteUser(user.id, user.fullName)} 
+                                        className={`p-1 rounded-full text-red-500 hover:bg-gray-200`}
+                                        title={'Excluir usuário'}
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>

@@ -3,9 +3,7 @@ import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, Lo
 import { mockClients } from '../data/mockData';
 import { mockVehicles } from '../data/mockData';
 import type { AlertItem, AlertStatus } from '../types';
-import { Session } from '@supabase/supabase-js';
-import { supabase } from '../integrations/supabase/client';
-import { useAuth } from './SessionProvider';
+import { useAuth } from './AuthProvider'; // Alterado para AuthProvider
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -29,17 +27,16 @@ const getAlertStatus = (dateString: string | undefined): AlertStatus => {
 
 interface HeaderProps {
   title: string;
-  session: Session;
   onMenuClick: () => void;
   avatarUrl: string | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl: userAvatarUrl }) => {
+const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvatarUrl }) => {
   const [isAlertsOpen, setIsAlertsOpen] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const alertsRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { userRole } = useAuth(); // Usamos o useAuth para obter o role atualizado
+  const { userRole, logout } = useAuth(); // Usamos o useAuth mockado
 
   const alerts: AlertItem[] = useMemo(() => {
     const allAlerts: AlertItem[] = [];
@@ -95,13 +92,13 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
     return null;
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    logout();
   };
 
-  const user = session.user;
-  const fullName = user?.user_metadata?.full_name || 'Usuário';
-  const role = userRole; // Usar o role do contexto para garantir que está atualizado
+  // Usamos dados mockados do AuthProvider
+  const fullName = 'Admin Mock';
+  const role = userRole; 
   const avatarUrl = userAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName as string)}&background=0D47A1&color=fff`;
 
   return (
