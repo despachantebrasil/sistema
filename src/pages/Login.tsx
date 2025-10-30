@@ -4,8 +4,8 @@ import { LoaderIcon } from '../components/Icons';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@urtech.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -19,7 +19,7 @@ const Login: React.FC = () => {
     if (success) {
       // Redirecionamento handled by App.tsx
     } else {
-      setError('Falha na autenticação simulada. Tente novamente.');
+      setError('Falha na autenticação. Verifique suas credenciais.');
     }
     setLoading(false);
   };
@@ -33,7 +33,7 @@ const Login: React.FC = () => {
           <h1 className="text-3xl font-bold text-primary">
             URTECH<span className="text-secondary"> DESPACHANTES</span>
           </h1>
-          <p className="mt-2 text-medium-text">Acesse sua conta de demonstração</p>
+          <p className="mt-2 text-medium-text">Acesse sua conta</p>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -77,13 +77,13 @@ const Login: React.FC = () => {
                 Entrando...
               </>
             ) : (
-              'Entrar (Modo Demo)'
+              'Entrar'
             )}
           </button>
         </form>
         
         <p className="text-center text-xs text-gray-500 pt-4 border-t">
-            Use qualquer e-mail e senha para entrar no modo de demonstração.
+            Se você não tem uma conta, crie uma no painel do Supabase.
         </p>
       </div>
     </div>

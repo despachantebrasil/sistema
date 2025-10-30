@@ -1,8 +1,9 @@
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { supabase } from '../integrations/supabase/client';
 import type { Role } from '../types';
 
 interface AuthContextType {
-  session: { user: { id: string, email: string } } | null;
+  session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
   isLoading: boolean;
   userRole: Role;
   userAvatarUrl: string | null;
@@ -20,39 +21,67 @@ export const useAuth = () => {
   return context;
 };
 
-const defaultUser = {
-    id: 'mock-admin-id',
-    email: 'admin@urtech.com',
-    fullName: 'Admin Mock',
-    role: 'Administrador' as Role,
-    avatarUrl: 'https://ui-avatars.com/api/?name=Admin+Mock&background=0D47A1&color=fff'
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Inicializa a sessão como null para forçar a tela de login
   const [session, setSession] = useState<AuthContextType['session']>(null);
-  const isLoading = false;
-  
-  // Estado derivado (será atualizado após o login)
-  const userRole: Role = session ? defaultUser.role : 'Usuário';
-  const userAvatarUrl: string | null = session ? defaultUser.avatarUrl : null;
+  const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<{ role: Role, avatar_url: string | null } | null>(null);
+
+  useEffect(() => {
+    // 1. Inicializa a sessão
+    const initializeSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      if (session) {
+        await fetchProfile(session.user.id);
+      }
+      setIsLoading(false);
+    };
+
+    initializeSession();
+
+    // 2. Escuta mudanças de estado
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role, avatar_url')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+    } else {
+      setProfile(data as { role: Role, avatar_url: string | null });
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulação de autenticação: aceita qualquer credencial para fins de demonstração
-    if (email && password) {
-        // Simula um pequeno atraso de rede
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Define a sessão mockada
-        setSession(defaultUser as any);
-        return true;
-    }
-    return false;
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setIsLoading(false);
+    return !error;
   };
 
-  const logout = () => {
-    setSession(null);
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
+
+  const userRole: Role = profile?.role || 'Usuário';
+  const userAvatarUrl: string | null = profile?.avatar_url || null;
 
   return (
     <AuthContext.Provider value={{ session, isLoading, userRole, userAvatarUrl, login, logout }}>
