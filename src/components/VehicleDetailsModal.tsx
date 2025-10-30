@@ -10,13 +10,12 @@ interface VehicleDetailsModalProps {
 interface DetailItemProps {
   label: string;
   value: string | number | undefined;
-  className?: string;
 }
 
-const DetailItem: React.FC<DetailItemProps> = ({ label, value, className }) => (
-  <div className={className}>
+const DetailItem: React.FC<DetailItemProps> = ({ label, value }) => (
+  <div>
     <p className="text-sm text-gray-500">{label}</p>
-    <p className="font-semibold text-dark-text break-words">{value || '-'}</p>
+    <p className="font-semibold text-dark-text">{value || '-'}</p>
   </div>
 );
 
@@ -26,7 +25,7 @@ const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onCl
   return (
     <Modal isOpen={!!vehicle} onClose={onClose} title="Detalhes do Veículo">
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-4 p-4 bg-light-bg rounded-lg border">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-light-bg rounded-lg border">
           <DetailItem label="Placa" value={vehicle.plate} />
           <DetailItem label="Marca" value={vehicle.brand} />
           <DetailItem label="Modelo" value={vehicle.model} />
@@ -35,8 +34,8 @@ const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onCl
           <DetailItem label="Cor" value={vehicle.color} />
           <DetailItem label="Combustível" value={vehicle.fuelType} />
           <DetailItem label="Proprietário" value={vehicle.ownerName} />
-          <DetailItem label="Chassi" value={vehicle.chassis} className="col-span-2" />
-          <DetailItem label="RENAVAM" value={vehicle.renavam} className="col-span-2" />
+          <DetailItem label="Chassi" value={vehicle.chassis} />
+          <DetailItem label="RENAVAM" value={vehicle.renavam} />
         </div>
 
         <div>
