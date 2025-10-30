@@ -9,6 +9,9 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Verifica se estamos no modo mockado (baseado na ausência de chaves)
+  const isMocked = !import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL === 'https://placeholder.supabase.co';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -19,7 +22,11 @@ const Login: React.FC = () => {
     if (success) {
       // Redirecionamento handled by App.tsx
     } else {
-      setError('Falha na autenticação. Verifique suas credenciais.');
+      if (isMocked) {
+         setError('Falha na autenticação simulada. Tente novamente.');
+      } else {
+         setError('Falha na autenticação. Verifique suas credenciais.');
+      }
     }
     setLoading(false);
   };
@@ -47,6 +54,7 @@ const Login: React.FC = () => {
               required 
               className={inputClasses} 
               disabled={loading}
+              placeholder={isMocked ? 'Use qualquer valor' : 'Seu e-mail'}
             />
           </div>
           <div>
@@ -59,6 +67,7 @@ const Login: React.FC = () => {
               required 
               className={inputClasses} 
               disabled={loading}
+              placeholder={isMocked ? 'Use qualquer valor' : 'Sua senha'}
             />
           </div>
           
@@ -77,13 +86,16 @@ const Login: React.FC = () => {
                 Entrando...
               </>
             ) : (
-              'Entrar'
+              isMocked ? 'Entrar (Modo Demo)' : 'Entrar'
             )}
           </button>
         </form>
         
         <p className="text-center text-xs text-gray-500 pt-4 border-t">
-            Se você não tem uma conta, crie uma no painel do Supabase.
+            {isMocked 
+                ? 'Modo de Demonstração Ativo. Configure as chaves do Supabase para autenticação real.'
+                : 'Se você não tem uma conta, crie uma no painel do Supabase.'
+            }
         </p>
       </div>
     </div>

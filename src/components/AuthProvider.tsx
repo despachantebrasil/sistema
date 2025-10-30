@@ -3,7 +3,7 @@ import { supabase } from '../integrations/supabase/client';
 import type { Role } from '../types';
 
 interface AuthContextType {
-  session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'];
+  session: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session'] | { user: { id: string, email: string } } | null;
   isLoading: boolean;
   userRole: Role;
   userAvatarUrl: string | null;
@@ -21,13 +21,34 @@ export const useAuth = () => {
   return context;
 };
 
+// Verifica se as chaves do Supabase estão configuradas
+const SUPABASE_CONFIGURED = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY && 
+                            import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co';
+
+const defaultMockUser = {
+    id: 'mock-admin-id',
+    email: 'admin@urtech.com',
+    fullName: 'Admin Mock',
+    role: 'Administrador' as Role,
+    avatarUrl: 'https://ui-avatars.com/api/?name=Admin+Mock&background=0D47A1&color=fff'
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<AuthContextType['session']>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<{ role: Role, avatar_url: string | null } | null>(null);
+  
+  // Corrigido: isMocked é calculado uma vez
+  const isMocked = !SUPABASE_CONFIGURED;
 
   useEffect(() => {
-    // 1. Inicializa a sessão
+    if (isMocked) {
+        // Modo Mock: Simula carregamento rápido e inicia sem sessão
+        setIsLoading(false);
+        return;
+    }
+
+    // Modo Supabase Real
     const initializeSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
@@ -39,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeSession();
 
-    // 2. Escuta mudanças de estado
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
@@ -52,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [isMocked]);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -70,6 +90,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    if (isMocked) {
+        // Login Mockado
+        if (email && password) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            setSession(defaultMockUser as any);
+            setProfile({ role: defaultMockUser.role, avatar_url: defaultMockUser.avatarUrl });
+            return true;
+        }
+        return false;
+    }
+    
+    // Login Supabase Real
     setIsLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setIsLoading(false);
@@ -77,7 +109,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    if (isMocked) {
+        setSession(null);
+        setProfile(null);
+    } else {
+        await supabase.auth.signOut();
+    }
   };
 
   const userRole: Role = profile?.role || 'Usuário';
