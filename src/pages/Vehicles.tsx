@@ -3,9 +3,11 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal from '../components/VehicleDetailsModal';
+import TransferVehicleModal from '../components/TransferVehicleModal';
 import { mockVehicles, mockClients } from '../data/mockData';
-import type { Vehicle, AlertStatus } from '../types';
-import { PlusIcon } from '../components/Icons';
+import type { Vehicle, AlertStatus, Service } from '../types';
+import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
+import { PlusIcon, SwitchHorizontalIcon } from '../components/Icons';
 
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
@@ -50,6 +52,7 @@ const Vehicles: React.FC = () => {
     const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+    const [transferringVehicle, setTransferringVehicle] = useState<Vehicle | null>(null);
 
     const handleSaveVehicle = (vehicleData: Omit<Vehicle, 'id'>) => {
         const newVehicle: Vehicle = {
@@ -66,6 +69,61 @@ const Vehicles: React.FC = () => {
 
     const handleCloseDetails = () => {
         setSelectedVehicle(null);
+    };
+
+    const handleOpenTransfer = (vehicle: Vehicle) => {
+        setTransferringVehicle(vehicle);
+    };
+
+    const handleCloseTransfer = () => {
+        setTransferringVehicle(null);
+    };
+
+    const handleConfirmTransfer = (vehicleId: number, newOwnerId: number) => {
+        const newOwner = mockClients.find(c => c.id === newOwnerId);
+        if (!newOwner) {
+            alert('Erro: Comprador não encontrado.');
+            return;
+        }
+
+        setVehicles(prevVehicles =>
+            prevVehicles.map(v =>
+                v.id === vehicleId
+                    ? { ...v, ownerId: newOwner.id, ownerName: newOwner.name }
+                    : v
+            )
+        );
+
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+        if (vehicle) {
+            const newServiceData: Omit<Service, 'id'> = {
+                name: 'Transferência de Propriedade',
+                clientName: newOwner.name,
+                vehiclePlate: vehicle.plate,
+                status: ServiceStatus.TODO,
+                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                price: 850.00,
+            };
+            
+            const serviceEvent = new CustomEvent('serviceAdded', { detail: newServiceData });
+            window.dispatchEvent(serviceEvent);
+
+            const transactionEvent = new CustomEvent('transactionAdded', { detail: {
+                description: `Serviço: Transferência - ${vehicle.plate}`,
+                category: 'Receita de Serviço',
+                date: new Date().toISOString().split('T')[0],
+                amount: newServiceData.price,
+                type: TransactionType.REVENUE,
+                status: TransactionStatus.PENDING,
+                dueDate: newServiceData.dueDate,
+                serviceId: Math.random(),
+                clientId: newOwner.id,
+            }});
+            window.dispatchEvent(transactionEvent);
+        }
+
+        alert(`Veículo ${vehicle?.plate} transferido para ${newOwner.name} com sucesso! Um novo serviço foi criado.`);
+        handleCloseTransfer();
     };
 
     return (
@@ -110,8 +168,12 @@ const Vehicles: React.FC = () => {
                                     <td className="p-4">
                                         <ExpirationDate date={vehicle.licensingExpirationDate} />
                                     </td>
-                                    <td className="p-4 space-x-2">
+                                    <td className="p-4 space-x-2 flex items-center">
                                         <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline">Detalhes</button>
+                                        <button onClick={() => handleOpenTransfer(vehicle)} className="text-green-600 hover:underline flex items-center">
+                                            <SwitchHorizontalIcon className="w-4 h-4 mr-1" />
+                                            Transferir
+                                        </button>
                                         <button className="text-red-500 hover:underline">Excluir</button>
                                     </td>
                                 </tr>
@@ -122,6 +184,13 @@ const Vehicles: React.FC = () => {
             </Card>
 
             <VehicleDetailsModal vehicle={selectedVehicle} onClose={handleCloseDetails} />
+
+            <TransferVehicleModal 
+                vehicle={transferringVehicle}
+                clients={mockClients}
+                onClose={handleCloseTransfer}
+                onConfirm={handleConfirmTransfer}
+            />
 
             <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Adicionar Novo Veículo">
                 <VehicleForm 

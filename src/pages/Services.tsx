@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import ServiceForm from '../components/ServiceForm';
@@ -27,6 +27,18 @@ const getStatusBadge = (status: ServiceStatus) => {
 const Services: React.FC = () => {
     const [services, setServices] = useState<Service[]>(mockServices);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    useEffect(() => {
+        const handleServiceAdded = (event: CustomEvent<Omit<Service, 'id'>>) => {
+            const newService = {
+                id: Date.now(),
+                ...event.detail
+            };
+            setServices(prev => [newService, ...prev]);
+        };
+        window.addEventListener('serviceAdded', handleServiceAdded as EventListener);
+        return () => window.removeEventListener('serviceAdded', handleServiceAdded as EventListener);
+    }, []);
 
     const handleAddService = (newServiceData: Omit<Service, 'id'>) => {
         const newService: Service = {

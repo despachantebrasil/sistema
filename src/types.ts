@@ -139,7 +139,7 @@ export interface NotificationItem {
 export type Role = 'Administrador' | 'Gerente' | 'Usuário';
 
 export interface AppUser {
-    id: string; 
+    id: string; // Will come from Supabase Auth
     fullName: string;
     email: string;
     role: Role;

@@ -2,22 +2,9 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, LogOutIcon } from './Icons';
 import { mockClients } from '../data/mockData';
 import { mockVehicles } from '../data/mockData';
-import type { AlertItem, AlertStatus, Role } from '../types';
-
-// Definindo tipos mínimos para simular Session e User
-interface MockUser {
-  id: string;
-  email: string;
-  user_metadata: {
-    full_name: string;
-    role: Role;
-  };
-}
-
-interface MockSession {
-    access_token: string;
-    user: MockUser;
-}
+import type { AlertItem, AlertStatus } from '../types';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '../integrations/supabase/client';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -41,7 +28,7 @@ const getAlertStatus = (dateString: string | undefined): AlertStatus => {
 
 interface HeaderProps {
   title: string;
-  session: MockSession;
+  session: Session;
   onMenuClick: () => void;
   avatarUrl: string | null;
 }
@@ -106,9 +93,8 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
     return null;
   }
 
-  const handleLogout = () => {
-    // No modo mock, apenas recarregamos a página para simular o logout
-    window.location.reload();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   const user = session.user;
@@ -186,7 +172,7 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
                 className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
                 <LogOutIcon className="w-4 h-4 mr-2" />
-                Sair (Mock)
+                Sair
               </button>
             </div>
           )}
