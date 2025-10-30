@@ -61,8 +61,6 @@ export interface Service {
   status: ServiceStatus;
   dueDate: string; // YYYY-MM-DD
   price: number;
-  payerClientId?: number;
-  payerClientName?: string;
 }
 
 export interface ServiceCategory {
