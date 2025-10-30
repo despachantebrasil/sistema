@@ -23,21 +23,27 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, currentSession: Session | null) => {
+    // Tentativa de buscar o perfil usando a view combinada
     const { data: profile, error } = await supabase
-      .from('profiles')
+      .from('user_profiles_view')
       .select('role, avatar_url')
       .eq('id', userId)
       .single();
 
     if (error) {
-      console.error('Error fetching user profile:', error);
-      setUserRole('Usuário');
-      setUserAvatarUrl(null);
+      console.log('Error fetching user profile from DB, falling back to metadata:', error);
+      // Fallback para metadados da sessão em caso de erro de DB/RLS
+      const fallbackRole = currentSession?.user?.user_metadata?.role as Role || 'Usuário';
+      const fallbackAvatar = currentSession?.user?.user_metadata?.avatar_url as string || null;
+      
+      setUserRole(fallbackRole);
+      setUserAvatarUrl(fallbackAvatar);
     } else if (profile) {
       setUserRole(profile.role as Role);
       setUserAvatarUrl(profile.avatar_url);
     } else {
+      // Se não houver perfil, mas houver sessão (o que não deveria acontecer após o trigger)
       setUserRole('Usuário');
       setUserAvatarUrl(null);
     }
@@ -48,7 +54,8 @@ const App: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
-        await fetchUserProfile(session.user.id);
+        // Passamos a sessão atualizada para a função de busca de perfil
+        await fetchUserProfile(session.user.id, session);
       }
       setLoading(false);
     });
