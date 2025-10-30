@@ -155,12 +155,8 @@ const UsersTab: React.FC = () => {
                 setLoading(false);
                 return;
             }
-
-            const userIds = profiles.map(p => p.id);
             
-            // Em um ambiente real, buscaríamos os emails via Service Role Key, mas aqui simulamos a busca de emails
-            // Como não temos acesso direto ao auth.users via RLS, vamos simplificar a busca de emails
-            // Nota: A view user_profiles_view não existe mais, então faremos uma busca simplificada.
+            // Removida a linha const userIds = profiles.map(p => p.id);
             
             // Para fins de demonstração, vamos assumir que o email está disponível ou usar um mock se o fetch falhar.
             
