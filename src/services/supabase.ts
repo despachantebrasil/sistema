@@ -126,3 +126,18 @@ export const updateUserWithProfile = async (
 
     return { user: data.user as AppUser, error: null };
 };
+
+/**
+ * Busca todos os usuários e seus perfis usando a função Edge (requer permissão de administrador).
+ * @returns Uma lista de AppUser ou um erro.
+ */
+export const fetchAllUsers = async (): Promise<{ users: AppUser[] | null; error: Error | null }> => {
+    const { data, error } = await supabase.functions.invoke('fetch-users');
+
+    if (error) {
+        console.error('Erro ao invocar a função fetch-users:', error);
+        return { users: null, error };
+    }
+
+    return { users: data.users as AppUser[], error: null };
+};

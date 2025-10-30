@@ -4,7 +4,7 @@ import Modal from '../components/ui/Modal';
 import { initialPermissions, mockCompanyProfile } from '../data/mockData';
 import type { AppUser, Role, PermissionsMap, CompanyProfile, Page } from '../types';
 import { PlusIcon, EditIcon, TrashIcon, CameraIcon } from '../components/Icons';
-import { createUserWithProfile, updateUserWithProfile } from '../services/supabase';
+import { createUserWithProfile, updateUserWithProfile, fetchAllUsers } from '../services/supabase';
 import { supabase } from '../integrations/supabase/client';
 
 type SettingsTab = 'users' | 'permissions' | 'company';
@@ -144,42 +144,24 @@ const UsersTab: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchUsers = async () => {
+        const loadUsers = async () => {
             setLoading(true);
-            // Buscamos dados da tabela profiles e fazemos um join manual para obter o email do auth.users
-            const { data: profiles, error: profileError } = await supabase.from('profiles').select('id, full_name, role, avatar_url');
+            const { users: fetchedUsers, error } = await fetchAllUsers();
             
-            if (profileError) {
-                console.error('Error fetching profiles:', profileError);
-                alert('Não foi possível carregar os usuários.');
+            if (error) {
+                console.error('Error fetching users:', error);
+                alert(`Não foi possível carregar os usuários: ${error.message}`);
                 setLoading(false);
                 return;
             }
             
-            // Removida a linha const userIds = profiles.map(p => p.id);
-            
-            // Para fins de demonstração, vamos assumir que o email está disponível ou usar um mock se o fetch falhar.
-            
-            const formattedUsers: AppUser[] = profiles.map((profile: any) => ({
-                id: profile.id,
-                fullName: profile.full_name,
-                email: `user_${profile.id.substring(0, 4)}@example.com`, // Mock email, pois não podemos buscar o email do auth.users diretamente via RLS
-                role: profile.role,
-                avatarUrl: profile.avatar_url,
-            }));
-            
-            // Para garantir que o email correto seja exibido, o ideal é usar a função Edge 'update-user' para buscar o perfil completo.
-            // Como a função 'update-user' retorna o perfil completo, vamos usá-la como base para o fetch inicial.
-            // No entanto, para o fetch inicial de *todos* os usuários, faremos uma busca simples e usaremos o email mockado/padrão.
-            
-            // Se o usuário logado for um administrador, ele pode ver todos os perfis.
-            // Se não for, ele só verá o próprio perfil (devido à política RLS).
-            
-            setUsers(formattedUsers);
+            if (fetchedUsers) {
+                setUsers(fetchedUsers);
+            }
             setLoading(false);
         };
 
-        fetchUsers();
+        loadUsers();
     }, []);
 
     const handleOpenModal = (user: AppUser | null) => {
