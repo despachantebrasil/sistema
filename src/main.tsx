@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './components/AuthProvider';
 
-// Limpa o armazenamento local para garantir um estado limpo, já que não usamos mais o Supabase para persistência.
+// Limpa o armazenamento local para garantir um estado limpo.
 localStorage.clear();
 sessionStorage.clear();
 

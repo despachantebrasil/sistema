@@ -19,7 +19,7 @@ const Login: React.FC = () => {
     if (success) {
       // Redirecionamento handled by App.tsx
     } else {
-      setError('Falha na autenticação. Verifique suas credenciais.');
+      setError('Falha na autenticação simulada. Tente novamente.');
     }
     setLoading(false);
   };
@@ -47,7 +47,7 @@ const Login: React.FC = () => {
               required 
               className={inputClasses} 
               disabled={loading}
-              placeholder={'Seu e-mail'}
+              placeholder={'Use qualquer valor'}
             />
           </div>
           <div>
@@ -60,7 +60,7 @@ const Login: React.FC = () => {
               required 
               className={inputClasses} 
               disabled={loading}
-              placeholder={'Sua senha'}
+              placeholder={'Use qualquer valor'}
             />
           </div>
           
@@ -79,13 +79,13 @@ const Login: React.FC = () => {
                 Entrando...
               </>
             ) : (
-              'Entrar'
+              'Entrar (Modo Demo)'
             )}
           </button>
         </form>
         
         <p className="text-center text-xs text-gray-500 pt-4 border-t">
-            Se você não tem uma conta, crie uma no painel do Supabase.
+            Modo de Demonstração Ativo.
         </p>
       </div>
     </div>

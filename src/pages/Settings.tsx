@@ -4,7 +4,7 @@ import Modal from '../components/ui/Modal';
 import { initialPermissions, mockCompanyProfile } from '../data/mockData';
 import type { AppUser, Role, PermissionsMap, CompanyProfile, Page } from '../types';
 import { PlusIcon, EditIcon, TrashIcon, CameraIcon } from '../components/Icons';
-import { createUserWithProfile, updateUserWithProfile, fetchAllUsers, deleteUser } from '../services/supabase';
+import { createUserWithProfile, updateUserWithProfile, fetchAllUsers, deleteUser } from '../services/userService';
 
 type SettingsTab = 'users' | 'permissions' | 'company';
 
