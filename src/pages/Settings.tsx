@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
-import { initialPermissions, mockCompanyProfile } from '../data/mockData';
+import { initialPermissions, mockCompanyProfile, mockUsers } from '../data/mockData';
 import type { AppUser, Role, PermissionsMap, CompanyProfile, Page } from '../types';
 import { PlusIcon, EditIcon, TrashIcon, CameraIcon } from '../components/Icons';
-import { createUserWithProfile, updateUserWithProfile } from '../services/supabase';
-import { supabase } from '../integrations/supabase/client';
 
 type SettingsTab = 'users' | 'permissions' | 'company';
 
@@ -57,34 +55,31 @@ const UserForm: React.FC<{
         e.preventDefault();
         setIsLoading(true);
 
-        try {
-            if (editingUser) {
-                const { user, error } = await updateUserWithProfile(
-                    editingUser.id,
-                    { fullName, email, role, avatarUrl: editingUser.avatarUrl },
-                    password || null,
-                    avatarFile
-                );
-                if (error) throw error;
-                if (user) {
-                    onSave(user, true);
-                }
-            } else {
-                const { user, error } = await createUserWithProfile(
-                    email,
-                    password,
-                    { fullName, role },
-                    avatarFile
-                );
-                if (error) throw error;
-                if (user) {
-                    onSave(user, false);
-                }
-            }
-        } catch (err: any) {
-            alert(`Erro ao salvar usuário: ${err.message}`);
-            setIsLoading(false);
+        const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+
+        let finalAvatarUrl = editingUser?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random&color=fff`;
+        if (avatarFile) {
+            finalAvatarUrl = await toBase64(avatarFile);
         }
+
+        const savedUser: AppUser = {
+            id: editingUser?.id || `mock-user-${Date.now()}`,
+            fullName,
+            email,
+            role,
+            avatarUrl: finalAvatarUrl,
+        };
+        
+        // Simulação de salvamento
+        setTimeout(() => {
+            onSave(savedUser, !!editingUser);
+            setIsLoading(false);
+        }, 500);
     };
 
     return (
@@ -117,7 +112,7 @@ const UserForm: React.FC<{
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Senha</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={editingUser ? "Deixe em branco para não alterar" : ""} className={inputClasses} minLength={editingUser ? undefined : 6} />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={editingUser ? "Deixe em branco para não alterar" : "Mínimo 6 caracteres"} className={inputClasses} minLength={editingUser ? undefined : 6} />
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Perfil de Acesso</label>
@@ -136,34 +131,9 @@ const UserForm: React.FC<{
 };
 
 const UsersTab: React.FC = () => {
-    const [users, setUsers] = useState<AppUser[]>([]);
+    const [users, setUsers] = useState<AppUser[]>(mockUsers);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<AppUser | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            const { data, error } = await supabase.from('user_profiles_view').select('id, full_name, role, email, avatar_url');
-            
-            if (error) {
-                console.error('Error fetching users:', error);
-                alert('Não foi possível carregar os usuários.');
-            } else {
-                const formattedUsers = data.map((profile: any) => ({
-                    id: profile.id,
-                    fullName: profile.full_name,
-                    email: profile.email,
-                    role: profile.role,
-                    avatarUrl: profile.avatar_url,
-                }));
-                setUsers(formattedUsers);
-            }
-            setLoading(false);
-        };
-
-        fetchUsers();
-    }, []);
 
     const handleOpenModal = (user: AppUser | null) => {
         setEditingUser(user);
@@ -184,28 +154,19 @@ const UsersTab: React.FC = () => {
         handleCloseModal();
     };
 
-    const handleDeleteUser = async (userId: string, userName: string) => {
+    const handleDeleteUser = (userId: string, userName: string) => {
         if (!window.confirm(`Tem certeza que deseja excluir o usuário "${userName}"? Esta ação não pode ser desfeita.`)) {
             return;
         }
-
-        const { error } = await supabase.functions.invoke('delete-user', {
-            body: { user_id: userId },
-        });
-
-        if (error) {
-            console.error('Error deleting user:', error);
-            alert(`Não foi possível excluir o usuário: ${error.message}`);
-        } else {
-            setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-            alert('Usuário excluído com sucesso.');
-        }
+        // Simulação de exclusão
+        setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+        alert('Usuário excluído com sucesso (Mock).');
     };
 
     return (
         <div>
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
-                <h3 className="text-xl font-bold">Gestão de Usuários</h3>
+                <h3 className="text-xl font-bold">Gestão de Usuários (Mock)</h3>
                 <button onClick={() => handleOpenModal(null)} className="btn-hover flex items-center justify-center">
                     <PlusIcon className="w-5 h-5 mr-2" />
                     Adicionar Usuário
@@ -222,41 +183,36 @@ const UsersTab: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {loading ? (
-                            <tr><td colSpan={4} className="text-center p-8">Carregando usuários...</td></tr>
-                        ) : (
-                            users.map(user => (
-                                <tr key={user.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4 font-medium flex items-center">
-                                        <img 
-                                            src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}`} 
-                                            alt={user.fullName} 
-                                            className="w-10 h-10 rounded-full mr-4 object-cover" 
-                                        />
-                                        {user.fullName}
-                                    </td>
-                                    <td className="p-4">{user.email}</td>
-                                    <td className="p-4">{user.role}</td>
-                                    <td className="p-4 space-x-2 flex items-center">
-                                        <button onClick={() => handleOpenModal(user)} className="text-primary p-1 hover:bg-gray-200 rounded-full">
-                                            <EditIcon className="w-4 h-4" />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteUser(user.id, user.fullName)} 
-                                            className={`p-1 rounded-full ${user.email === 'gilshikam@gmail.com' ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:bg-gray-200'}`}
-                                            disabled={user.email === 'gilshikam@gmail.com'}
-                                            title={user.email === 'gilshikam@gmail.com' ? 'Este administrador não pode ser removido.' : 'Excluir usuário'}
-                                        >
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
+                        {users.map(user => (
+                            <tr key={user.id} className="border-b hover:bg-gray-50">
+                                <td className="p-4 font-medium flex items-center">
+                                    <img 
+                                        src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}`} 
+                                        alt={user.fullName} 
+                                        className="w-10 h-10 rounded-full mr-4 object-cover" 
+                                    />
+                                    {user.fullName}
+                                </td>
+                                <td className="p-4">{user.email}</td>
+                                <td className="p-4">{user.role}</td>
+                                <td className="p-4 space-x-2 flex items-center">
+                                    <button onClick={() => handleOpenModal(user)} className="text-primary p-1 hover:bg-gray-200 rounded-full">
+                                        <EditIcon className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleDeleteUser(user.id, user.fullName)} 
+                                        className={`p-1 rounded-full text-red-500 hover:bg-gray-200`}
+                                        title={'Excluir usuário (Mock)'}
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
-            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingUser ? "Editar Usuário" : "Adicionar Novo Usuário"}>
+            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingUser ? "Editar Usuário (Mock)" : "Adicionar Novo Usuário (Mock)"}>
                 <UserForm 
                     onSave={handleSaveUser} 
                     onCancel={handleCloseModal} 
@@ -382,7 +338,7 @@ const CompanyTab: React.FC = () => {
 
 
 // --- Main Settings Page Component ---
-const Settings: React.FC = () => { // Removed session prop
+const Settings: React.FC = () => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('users');
 
     const TabButton: React.FC<{ tab: SettingsTab, label: string }> = ({ tab, label }) => (
