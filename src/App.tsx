@@ -1,7 +1,8 @@
 import React, { useState, Suspense } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { useAuth } from './components/AuthProvider'; // Alterado para AuthProvider
+import Login from './pages/Login';
+import { useAuth } from './components/AuthProvider';
 import type { Page } from './types';
 
 // Importações de Páginas
@@ -18,22 +19,16 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // No modo mockado, isLoading deve ser falso e session deve existir
-  if (isLoading || !session) {
-    // Se o session for null (após logout simulado), podemos mostrar uma mensagem simples
-    if (!session) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-light-bg">
-                <p className="text-xl text-primary">Sessão encerrada. Recarregue a página para reiniciar o modo de demonstração.</p>
-            </div>
-        );
-    }
-    
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-light-bg">
         <p className="text-xl text-primary">Carregando...</p>
       </div>
     );
+  }
+
+  if (!session) {
+    return <Login />;
   }
 
   const renderPage = (page: Page) => {

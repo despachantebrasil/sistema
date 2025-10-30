@@ -6,6 +6,7 @@ interface AuthContextType {
   isLoading: boolean;
   userRole: Role;
   userAvatarUrl: string | null;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -28,21 +29,33 @@ const defaultUser = {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<AuthContextType['session']>(defaultUser as any);
-  const isLoading = false; // Mantido como constante, pois não há carregamento real
+  // Inicializa a sessão como null para forçar a tela de login
+  const [session, setSession] = useState<AuthContextType['session']>(null);
+  const isLoading = false;
   
-  // No modo mockado, o usuário está sempre logado como Admin
-  const userRole: Role = defaultUser.role;
-  const userAvatarUrl: string | null = defaultUser.avatarUrl;
+  // Estado derivado (será atualizado após o login)
+  const userRole: Role = session ? defaultUser.role : 'Usuário';
+  const userAvatarUrl: string | null = session ? defaultUser.avatarUrl : null;
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    // Simulação de autenticação: aceita qualquer credencial para fins de demonstração
+    if (email && password) {
+        // Simula um pequeno atraso de rede
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Define a sessão mockada
+        setSession(defaultUser as any);
+        return true;
+    }
+    return false;
+  };
 
   const logout = () => {
-    // Simula o logout limpando a sessão (embora o App.tsx precise ser ajustado para não depender disso)
     setSession(null);
-    alert('Logout simulado. Recarregue a página para reentrar no modo de demonstração.');
   };
 
   return (
-    <AuthContext.Provider value={{ session, isLoading, userRole, userAvatarUrl, logout }}>
+    <AuthContext.Provider value={{ session, isLoading, userRole, userAvatarUrl, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
