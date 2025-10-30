@@ -1,4 +1,9 @@
+/// <reference lib="deno.ns" />
+/// <reference lib="deno.unstable" />
+
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
+// @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 // Define os cabeçalhos CORS para permitir requisições do seu app
@@ -7,7 +12,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Responde a requisições OPTIONS (pre-flight) para CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -65,7 +70,7 @@ serve(async (req) => {
     })
   } catch (e) {
     console.error('Erro inesperado:', e)
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
