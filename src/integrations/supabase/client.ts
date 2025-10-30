@@ -8,4 +8,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error("Supabase URL or Anon Key is missing. Please check your environment variables.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Usamos valores de fallback se as variáveis não estiverem definidas para evitar erros de inicialização,
+// mas o login real falhará se o usuário não as configurar.
+const url = supabaseUrl || 'https://placeholder.supabase.co';
+const key = supabaseAnonKey || 'placeholder_anon_key';
+
+export const supabase = createClient(url, key);
