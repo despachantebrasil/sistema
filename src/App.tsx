@@ -23,55 +23,31 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const fetchUserProfile = async (userId: string, currentSession: Session | null) => {
-    // 1. Tenta buscar o perfil do DB
-    const { data: profile, error } = await supabase
-      .from('user_profiles_view')
-      .select('role, avatar_url')
-      .eq('id', userId)
-      .single();
-
-    // 2. Aplica o fallback se houver erro ou perfil vazio
-    if (error || !profile) {
-      console.log('Error fetching user profile from DB, falling back to metadata:', error);
-      const fallbackRole = currentSession?.user?.user_metadata?.role as Role || 'Usuário';
-      const fallbackAvatar = currentSession?.user?.user_metadata?.avatar_url as string || null;
-      
-      setUserRole(fallbackRole);
-      setUserAvatarUrl(fallbackAvatar);
+  const extractProfileFromSession = (currentSession: Session | null) => {
+    if (currentSession?.user) {
+      const role = currentSession.user.user_metadata?.role as Role || 'Usuário';
+      const avatarUrl = currentSession.user.user_metadata?.avatar_url as string || null;
+      setUserRole(role);
+      setUserAvatarUrl(avatarUrl);
     } else {
-      // 3. Usa dados do DB
-      setUserRole(profile.role as Role);
-      setUserAvatarUrl(profile.avatar_url);
+      setUserRole('Usuário');
+      setUserAvatarUrl(null);
     }
   };
 
   useEffect(() => {
-    // Inicializa o carregamento
     setLoading(true);
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      
-      if (session?.user) {
-        // Se houver sessão, tenta buscar o perfil
-        await fetchUserProfile(session.user.id, session);
-      } else {
-        // Se não houver sessão, reseta o perfil
-        setUserRole('Usuário');
-        setUserAvatarUrl(null);
-      }
-      
-      // Finaliza o carregamento após a resolução da sessão/perfil
+      extractProfileFromSession(session);
       setLoading(false);
     });
 
-    // Também verifica a sessão inicial imediatamente
+    // Verifica a sessão inicial imediatamente
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
         setSession(initialSession);
-        if (initialSession?.user) {
-            await fetchUserProfile(initialSession.user.id, initialSession);
-        }
+        extractProfileFromSession(initialSession);
         setLoading(false);
     });
 
