@@ -99,6 +99,14 @@ const Clients: React.FC = () => {
         }
     };
 
+    const getClientAvatarUrl = (client: Client) => {
+        // Fallback URL if avatarUrl is null or empty
+        if (!client.avatarUrl) {
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=0D47A1&color=fff`;
+        }
+        return client.avatarUrl;
+    };
+
     return (
         <div className="p-4 md:p-8">
             <Card>
@@ -149,7 +157,11 @@ const Clients: React.FC = () => {
                                 filteredClients.map(client => (
                                     <tr key={client.id} className="border-b hover:bg-gray-50">
                                         <td className="p-4 font-medium flex items-center">
-                                            <img src={client.avatarUrl} alt={client.name} className="w-10 h-10 rounded-full mr-4 object-cover" />
+                                            <img 
+                                                src={getClientAvatarUrl(client)} 
+                                                alt={client.name} 
+                                                className="w-10 h-10 rounded-full mr-4 object-cover" 
+                                            />
                                             {client.name}
                                         </td>
                                         <td className="p-4">

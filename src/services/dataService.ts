@@ -22,7 +22,7 @@ export const uploadAvatar = async (file: File): Promise<string> => {
     try {
         const user_id = await getUserId();
         const fileExt = file.name.split('.').pop();
-        const filePath = `${user_id}/${Date.now()}.${fileExt}`;
+        const filePath = `${user_id}/avatars/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
             .from('avatars')
@@ -34,6 +34,31 @@ export const uploadAvatar = async (file: File): Promise<string> => {
 
         const { data } = supabase.storage
             .from('avatars')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
+    } catch (e) {
+        throw e;
+    }
+};
+
+export const uploadVehicleImage = async (file: File, plate: string): Promise<string> => {
+    try {
+        const user_id = await getUserId();
+        const fileExt = file.name.split('.').pop();
+        // Use plate and timestamp for unique path
+        const filePath = `${user_id}/${plate}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('vehicle_images')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            handleSupabaseError(uploadError, 'fazer upload da imagem do veículo');
+        }
+
+        const { data } = supabase.storage
+            .from('vehicle_images')
             .getPublicUrl(filePath);
 
         return data.publicUrl;

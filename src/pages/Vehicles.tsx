@@ -4,7 +4,7 @@ import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal from '../components/VehicleDetailsModal';
 import TransferVehicleModal from '../components/TransferVehicleModal';
-import { fetchVehicles, saveVehicle, deleteVehicle, fetchClients, subscribeToVehicles } from '../services/dataService';
+import { fetchVehicles, saveVehicle, deleteVehicle, fetchClients, subscribeToVehicles, uploadVehicleImage } from '../services/dataService';
 import type { Vehicle, AlertStatus, Service, Client } from '../types';
 import { ServiceStatus } from '../types';
 import { PlusIcon, SwitchHorizontalIcon, LoaderIcon } from '../components/Icons';
@@ -78,13 +78,24 @@ const Vehicles: React.FC = () => {
         };
     }, []);
 
-    const handleSaveVehicle = async (vehicleData: Omit<Vehicle, 'id'>) => {
+    const handleSaveVehicle = async (vehicleData: Omit<Vehicle, 'id'>, newImageFiles: File[]) => {
         try {
-            // We need to strip 'ownerName' before saving, as the DB handles the join.
+            // 1. Upload new images to Supabase Storage
+            const uploadPromises = newImageFiles.map(file => uploadVehicleImage(file, vehicleData.plate));
+            const newImageUrls = await Promise.all(uploadPromises);
+
+            // 2. Combine existing URLs (passed from form) with new URLs
+            const finalImageUrls = [...(vehicleData.imageUrls || []), ...newImageUrls];
+
+            // 3. Prepare data for DB save
             const { ownerName, ...dataToSave } = vehicleData;
-            const savedVehicle = await saveVehicle(dataToSave);
+            const dataWithUrls = { ...dataToSave, imageUrls: finalImageUrls };
+
+            const savedVehicle = await saveVehicle(dataWithUrls, selectedVehicle?.id);
+            
             setVehicles(prev => [savedVehicle, ...prev.filter(v => v.id !== savedVehicle.id)]);
             setIsFormModalOpen(false);
+            setSelectedVehicle(null); // Clear selected vehicle after save/edit
         } catch (error) {
             alert('Erro ao salvar veículo. Verifique o console para detalhes.');
         }
@@ -131,6 +142,7 @@ const Vehicles: React.FC = () => {
             const dataToSave: Omit<Vehicle, 'id' | 'ownerName'> = {
                 ...vehicle,
                 ownerId: newOwner.id,
+                imageUrls: vehicle.imageUrls, // Keep existing URLs
             };
             
             const updatedVehicle = await saveVehicle(dataToSave, vehicleId);
@@ -170,7 +182,10 @@ const Vehicles: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                     <h2 className="text-xl font-bold">Frota de Veículos</h2>
                     <button 
-                        onClick={() => setIsFormModalOpen(true)}
+                        onClick={() => {
+                            setSelectedVehicle(null); // Ensure we are adding, not editing
+                            setIsFormModalOpen(true);
+                        }}
                         className="flex items-center justify-center btn-hover"
                     >
                         <PlusIcon className="w-5 h-5 mr-2" />
@@ -242,11 +257,12 @@ const Vehicles: React.FC = () => {
                 onConfirm={handleConfirmTransfer}
             />
 
-            <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Adicionar Novo Veículo">
+            <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title={selectedVehicle ? "Editar Veículo" : "Adicionar Novo Veículo"}>
                 <VehicleForm 
                     onSave={handleSaveVehicle}
                     onCancel={() => setIsFormModalOpen(false)}
                     clients={clients}
+                    vehicle={selectedVehicle || undefined}
                 />
             </Modal>
         </div>

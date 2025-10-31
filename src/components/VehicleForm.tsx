@@ -3,7 +3,7 @@ import type { Vehicle, Client } from '../types';
 import { CameraIcon, CloseIcon } from './Icons';
 
 interface VehicleFormProps {
-    onSave: (vehicle: Omit<Vehicle, 'id'>) => void;
+    onSave: (vehicle: Omit<Vehicle, 'id'>, newImageFiles: File[]) => void;
     onCancel: () => void;
     clients: Client[];
     vehicle?: Vehicle; // For editing
@@ -23,8 +23,12 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         ownerId: vehicle?.ownerId || '',
         licensingExpirationDate: vehicle?.licensingExpirationDate || '',
     });
-    const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.imageUrls || []);
+
+    // Separate existing URLs from new file previews (blob URLs)
+    const existingImageUrls = imagePreviews.filter((p: string) => !p.startsWith('blob:'));
+    const newFilePreviews = imagePreviews.filter((p: string) => p.startsWith('blob:'));
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -34,34 +38,31 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            const newFiles = files.slice(0, 4 - imageFiles.length);
+            const filesToAdd = files.slice(0, 4 - imagePreviews.length);
 
-            if (newFiles.length > 0) {
-                const newImageFiles = [...imageFiles, ...newFiles];
-                setImageFiles(newImageFiles);
+            if (filesToAdd.length > 0) {
+                setNewImageFiles(prev => [...prev, ...filesToAdd]);
 
-                const newPreviews = newFiles.map((file: File) => URL.createObjectURL(file));
+                const newPreviews = filesToAdd.map((file: File) => URL.createObjectURL(file));
                 setImagePreviews(prev => [...prev, ...newPreviews]);
             }
         }
     };
 
     const handleRemoveImage = (index: number) => {
-        const newImageFiles = [...imageFiles];
-        const newImagePreviews = [...imagePreviews];
+        const removedPreview = imagePreviews[index];
+        
+        setImagePreviews(prev => prev.filter((_, i) => i !== index));
 
-        // If the removed image was a new file, revoke its object URL
-        const removedPreview = newImagePreviews[index];
-        const fileIndex = imagePreviews.findIndex((p: string) => p === removedPreview);
-        if (fileIndex >= (imagePreviews.length - newImageFiles.length)) {
-           URL.revokeObjectURL(removedPreview);
-           newImageFiles.splice(fileIndex - (imagePreviews.length - newImageFiles.length), 1);
+        // If the removed image was a new file (blob URL), remove it from newImageFiles array
+        if (removedPreview.startsWith('blob:')) {
+            // Find the corresponding file in newImageFiles based on its index relative to other new files
+            const newFileIndex = index - existingImageUrls.length;
+            if (newFileIndex >= 0 && newFileIndex < newImageFiles.length) {
+                setNewImageFiles(prev => prev.filter((_, i) => i !== newFileIndex));
+                URL.revokeObjectURL(removedPreview);
+            }
         }
-        
-        newImagePreviews.splice(index, 1);
-        
-        setImageFiles(newImageFiles);
-        setImagePreviews(newImagePreviews);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -72,31 +73,19 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             return;
         }
 
-        const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
-
-        // Note: In a real app, images should be uploaded to Supabase Storage, not stored as base64 in the DB.
-        // We keep the base64 logic for now to maintain existing functionality.
-        const newImageUrls = await Promise.all(imageFiles.map((file: File) => toBase64(file)));
-        const existingImageUrls = imagePreviews.filter((p: string) => p.startsWith('http'));
-
+        // Pass the files and the current list of existing URLs to the parent
         onSave({
             ...formData,
             yearManufacture: Number(formData.yearManufacture),
             yearModel: Number(formData.yearModel),
             ownerId: Number(formData.ownerId),
             ownerName: owner.name,
-            imageUrls: [...existingImageUrls, ...newImageUrls],
+            imageUrls: existingImageUrls, // Only pass existing URLs back
             licensingExpirationDate: formData.licensingExpirationDate || undefined,
-        });
+        }, newImageFiles);
 
-        imagePreviews.forEach((url: string) => {
-            if(url.startsWith('blob:')) URL.revokeObjectURL(url)
-        });
+        // Clean up blob URLs after submission
+        newFilePreviews.forEach((url: string) => URL.revokeObjectURL(url));
     };
 
     return (
