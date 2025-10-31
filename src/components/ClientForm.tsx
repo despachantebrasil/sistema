@@ -4,7 +4,7 @@ import { ClientType } from '../types';
 import { CameraIcon } from './Icons';
 
 interface ClientFormProps {
-    onSave: (clientData: Omit<Client, 'id' | 'docStatus' | 'avatarUrl'>, avatarFile: File | null) => void;
+    onSave: (clientData: Omit<Client, 'id' | 'docStatus'>, avatarFile: File | null) => void; // Updated type to include avatarUrl in clientData
     onCancel: () => void;
     client?: Client; // For editing
 }
@@ -23,6 +23,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         cpfCnpj: client?.cpfCnpj || '',
         tradeName: client?.tradeName || '',
         contactName: client?.contactName || '',
+        // Include existing avatarUrl in formData if editing
+        avatarUrl: client?.avatarUrl || '', 
     });
 
     const [avatarPreview, setAvatarPreview] = useState<string | null>(client?.avatarUrl || null);
@@ -49,6 +51,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             return;
         }
 
+        // Pass the full formData (which includes the existing avatarUrl if no new file was selected)
         onSave({ ...formData, clientType }, avatarFile);
     };
 

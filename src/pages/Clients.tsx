@@ -63,12 +63,16 @@ const Clients: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'docStatus' | 'avatarUrl'>, avatarFile: File | null) => {
+    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'docStatus'>, avatarFile: File | null) => {
         try {
-            let avatarUrl = editingClient?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=random&color=fff`;
+            let avatarUrl = clientData.avatarUrl; // Start with existing URL (passed from form)
 
             if (avatarFile) {
+                // If a new file is uploaded, overwrite the URL with the new public URL
                 avatarUrl = await uploadAvatar(avatarFile);
+            } else if (!avatarUrl) {
+                // If no file and no existing URL, generate fallback
+                avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=0D47A1&color=fff`;
             }
 
             const finalClientData = { ...clientData, avatarUrl };
