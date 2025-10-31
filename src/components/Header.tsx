@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, LogOutIcon } from './Icons';
-import { mockClients } from '../data/mockData';
-import { mockVehicles } from '../data/mockData';
-import type { AlertItem, AlertStatus } from '../types';
-import { useAuth } from './AuthProvider'; // Alterado para AuthProvider
+import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, LogOutIcon, LoaderIcon } from './Icons';
+import { fetchClients, fetchVehicles } from '../services/dataService';
+import type { AlertItem, AlertStatus, Client, Vehicle } from '../types';
+import { useAuth } from './AuthProvider';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -34,43 +33,24 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvatarUrl }) => {
   const [isAlertsOpen, setIsAlertsOpen] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  
   const alertsRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { userRole, logout } = useAuth(); // Usamos o useAuth mockado
-
-  const alerts: AlertItem[] = useMemo(() => {
-    const allAlerts: AlertItem[] = [];
-
-    mockClients.forEach(client => {
-      const status = getAlertStatus(client.cnhExpirationDate);
-      if (status !== 'ok') {
-        allAlerts.push({
-          id: `client-${client.id}`,
-          type: 'CNH',
-          message: `CNH de ${client.name}`,
-          date: client.cnhExpirationDate!,
-          status,
-        });
-      }
-    });
-
-    mockVehicles.forEach(vehicle => {
-      const status = getAlertStatus(vehicle.licensingExpirationDate);
-      if (status !== 'ok') {
-        allAlerts.push({
-          id: `vehicle-${vehicle.id}`,
-          type: 'Licenciamento',
-          message: `Licenciamento de ${vehicle.plate}`,
-          date: vehicle.licensingExpirationDate!,
-          status,
-        });
-      }
-    });
-    
-    return allAlerts.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, []);
+  const { userRole, logout } = useAuth();
 
   useEffect(() => {
+    const loadAlertData = async () => {
+        setIsDataLoading(true);
+        const [clientData, vehicleData] = await Promise.all([fetchClients(), fetchVehicles()]);
+        setClients(clientData);
+        setVehicles(vehicleData);
+        setIsDataLoading(false);
+    };
+    loadAlertData();
+
     const handleClickOutside = (event: MouseEvent) => {
       if (alertsRef.current && !alertsRef.current.contains(event.target as Node)) {
         setIsAlertsOpen(false);
@@ -84,6 +64,39 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvat
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const alerts: AlertItem[] = useMemo(() => {
+    const allAlerts: AlertItem[] = [];
+
+    clients.forEach(client => {
+      const status = getAlertStatus(client.cnhExpirationDate);
+      if (status !== 'ok' && client.cnhExpirationDate) {
+        allAlerts.push({
+          id: `client-${client.id}`,
+          type: 'CNH',
+          message: `CNH de ${client.name}`,
+          date: client.cnhExpirationDate,
+          status,
+        });
+      }
+    });
+
+    vehicles.forEach(vehicle => {
+      const status = getAlertStatus(vehicle.licensingExpirationDate);
+      if (status !== 'ok' && vehicle.licensingExpirationDate) {
+        allAlerts.push({
+          id: `vehicle-${vehicle.id}`,
+          type: 'Licenciamento',
+          message: `Licenciamento de ${vehicle.plate}`,
+          date: vehicle.licensingExpirationDate,
+          status,
+        });
+      }
+    });
+    
+    return allAlerts.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [clients, vehicles]);
+
   
   const getAlertIcon = (type: AlertItem['type']) => {
     const baseClass = "w-5 h-5 mr-3 flex-shrink-0";
@@ -133,7 +146,11 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvat
                 <h3 className="font-semibold text-dark-text">Notificações de Vencimento</h3>
               </div>
               <ul className="py-2 max-h-96 overflow-y-auto">
-                {alerts.length > 0 ? alerts.map((alert: AlertItem) => (
+                {isDataLoading ? (
+                    <li className="px-4 py-3 text-sm text-center text-gray-500">
+                        <LoaderIcon className="w-4 h-4 inline mr-2" /> Carregando alertas...
+                    </li>
+                ) : alerts.length > 0 ? alerts.map((alert: AlertItem) => (
                   <li key={alert.id} className="px-4 py-2 hover:bg-gray-50 flex items-start">
                       {getAlertIcon(alert.type)}
                       <div>

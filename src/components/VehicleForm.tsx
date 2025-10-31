@@ -21,6 +21,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         color: vehicle?.color || '',
         fuelType: vehicle?.fuelType || '',
         ownerId: vehicle?.ownerId || '',
+        licensingExpirationDate: vehicle?.licensingExpirationDate || '',
     });
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.imageUrls || []);
@@ -78,6 +79,8 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             reader.onerror = error => reject(error);
         });
 
+        // Note: In a real app, images should be uploaded to Supabase Storage, not stored as base64 in the DB.
+        // We keep the base64 logic for now to maintain existing functionality.
         const newImageUrls = await Promise.all(imageFiles.map((file: File) => toBase64(file)));
         const existingImageUrls = imagePreviews.filter((p: string) => p.startsWith('http'));
 
@@ -88,6 +91,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             ownerId: Number(formData.ownerId),
             ownerName: owner.name,
             imageUrls: [...existingImageUrls, ...newImageUrls],
+            licensingExpirationDate: formData.licensingExpirationDate || undefined,
         });
 
         imagePreviews.forEach((url: string) => {
@@ -152,13 +156,20 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
 
-            <div>
-                <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
-                <input type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
+                    <input type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                </div>
+                 <div>
+                    <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
+                    <input type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                </div>
             </div>
-             <div>
-                <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
-                <input type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+            
+            <div>
+                <label htmlFor="licensingExpirationDate" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
+                <input type="date" name="licensingExpirationDate" id="licensingExpirationDate" value={formData.licensingExpirationDate} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
             </div>
 
             <div>

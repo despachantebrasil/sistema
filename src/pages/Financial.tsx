@@ -2,10 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import TransactionForm from '../components/TransactionForm';
-import { financialKpis, mockTransactions } from '../data/mockData';
+import { financialKpis } from '../data/mockData';
+import { fetchTransactions, saveTransaction, deleteTransaction, subscribeToTransactions } from '../services/dataService';
 import type { Transaction } from '../types';
 import { TransactionType, TransactionStatus } from '../types';
-import { PlusIcon, DollarSignIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, EditIcon, TrashIcon } from '../components/Icons';
+import { PlusIcon, DollarSignIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, EditIcon, TrashIcon, LoaderIcon } from '../components/Icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
@@ -25,21 +26,45 @@ const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style:
 type FinancialTab = 'overview' | 'receivables' | 'payables' | 'all';
 
 const Financial: React.FC = () => {
-    const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [activeTab, setActiveTab] = useState<FinancialTab>('overview');
 
+    const loadTransactions = async () => {
+        setIsLoading(true);
+        const data = await fetchTransactions();
+        setTransactions(data);
+        setIsLoading(false);
+    };
+
     useEffect(() => {
-        const handleTransactionAdded = (event: CustomEvent<Omit<Transaction, 'id'>>) => {
-            const newTransaction = {
-                id: Date.now(),
-                ...event.detail
-            };
-            setTransactions(prev => [newTransaction, ...prev]);
+        loadTransactions();
+
+        // Listener for cross-page service creation (from Services/Vehicles pages)
+        const handleTransactionAdded = async (event: CustomEvent<Omit<Transaction, 'id'>>) => {
+            try {
+                const savedTransaction = await saveTransaction(event.detail);
+                setTransactions(prev => [savedTransaction, ...prev]);
+            } catch (error) {
+                alert('Erro ao registrar transação automática.');
+            }
         };
-        window.addEventListener('transactionAdded', handleTransactionAdded as EventListener);
-        return () => window.removeEventListener('transactionAdded', handleTransactionAdded as EventListener);
+        // Fix: Use 'as any' to correctly cast the CustomEvent handler to EventListener
+        window.addEventListener('transactionAdded', handleTransactionAdded as any);
+
+        // Realtime Subscription
+        const subscription = subscribeToTransactions((payload) => {
+            console.log('Realtime Transaction Change:', payload);
+            loadTransactions(); // Simple reload for now
+        });
+
+        return () => {
+            // Fix: Use 'as any' for removal as well
+            window.removeEventListener('transactionAdded', handleTransactionAdded as any);
+            subscription.unsubscribe();
+        };
     }, []);
 
     const handleOpenModal = (transaction: Transaction | null = null) => {
@@ -52,18 +77,31 @@ const Financial: React.FC = () => {
         setEditingTransaction(null);
     };
 
-    const handleSaveTransaction = (data: Omit<Transaction, 'id'>) => {
-        if (editingTransaction) {
-            setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? { id: t.id, ...data } : t));
-        } else {
-            setTransactions(prev => [{ id: Date.now(), ...data }, ...prev]);
+    const handleSaveTransaction = async (data: Omit<Transaction, 'id'>) => {
+        try {
+            const savedTransaction = await saveTransaction(data, editingTransaction?.id);
+            
+            setTransactions(prev => {
+                if (editingTransaction) {
+                    return prev.map(t => t.id === editingTransaction.id ? savedTransaction : t);
+                } else {
+                    return [savedTransaction, ...prev];
+                }
+            });
+            handleCloseModal();
+        } catch (error) {
+            alert('Erro ao salvar transação. Verifique o console para detalhes.');
         }
-        handleCloseModal();
     };
 
-    const handleDeleteTransaction = (id: number) => {
+    const handleDeleteTransaction = async (id: number) => {
         if (window.confirm('Tem certeza de que deseja excluir esta transação?')) {
-            setTransactions(prev => prev.filter(t => t.id !== id));
+            try {
+                await deleteTransaction(id);
+                setTransactions(prev => prev.filter(t => t.id !== id));
+            } catch (error) {
+                alert('Erro ao excluir transação.');
+            }
         }
     };
     
@@ -132,7 +170,13 @@ const Financial: React.FC = () => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-dark-text mb-4">Fluxo de Caixa Mensal</h2>
-                            {renderCashFlowChart()}
+                            {isLoading ? (
+                                <div className="text-center p-8 text-gray-500">
+                                    <LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando dados financeiros...
+                                </div>
+                            ) : (
+                                renderCashFlowChart()
+                            )}
                         </div>
                     </div>
                 )}
@@ -163,31 +207,43 @@ const Financial: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredTransactions.map(t => (
-                                        <tr key={t.id} className="border-b hover:bg-gray-50">
-                                            <td className="p-4">
-                                                <div className="flex items-center">
-                                                    {t.type === TransactionType.REVENUE ? <ArrowUpCircleIcon className="w-5 h-5 mr-3 text-green-500"/> : <ArrowDownCircleIcon className="w-5 h-5 mr-3 text-red-500"/>}
-                                                    <div>
-                                                        <p className="font-medium">{t.description}</p>
-                                                        <p className="text-sm text-gray-500">{t.category}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-4">{new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                                            <td className="p-4">{t.dueDate ? new Date(t.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-                                            <td className={`p-4 font-medium ${t.type === TransactionType.REVENUE ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(t.amount)}</td>
-                                            <td className="p-4">
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${t.status === TransactionStatus.PAID ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                    {t.status}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 space-x-2 flex items-center">
-                                                <button onClick={() => handleOpenModal(t)} className="text-primary p-1 hover:bg-gray-200 rounded-full"><EditIcon className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDeleteTransaction(t.id)} className="text-red-500 p-1 hover:bg-gray-200 rounded-full"><TrashIcon className="w-4 h-4" /></button>
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan={6} className="text-center p-8 text-gray-500">
+                                                <LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando transações...
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : filteredTransactions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="text-center p-8 text-gray-500">Nenhuma transação encontrada.</td>
+                                        </tr>
+                                    ) : (
+                                        filteredTransactions.map(t => (
+                                            <tr key={t.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-4">
+                                                    <div className="flex items-center">
+                                                        {t.type === TransactionType.REVENUE ? <ArrowUpCircleIcon className="w-5 h-5 mr-3 text-green-500"/> : <ArrowDownCircleIcon className="w-5 h-5 mr-3 text-red-500"/>}
+                                                        <div>
+                                                            <p className="font-medium">{t.description}</p>
+                                                            <p className="text-sm text-gray-500">{t.category}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">{new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                                <td className="p-4">{t.dueDate ? new Date(t.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                                                <td className={`p-4 font-medium ${t.type === TransactionType.REVENUE ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(t.amount)}</td>
+                                                <td className="p-4">
+                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${t.status === TransactionStatus.PAID ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {t.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 space-x-2 flex items-center">
+                                                    <button onClick={() => handleOpenModal(t)} className="text-primary p-1 hover:bg-gray-200 rounded-full"><EditIcon className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDeleteTransaction(t.id)} className="text-red-500 p-1 hover:bg-gray-200 rounded-full"><TrashIcon className="w-4 h-4" /></button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>

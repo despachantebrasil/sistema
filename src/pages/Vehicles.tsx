@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal from '../components/VehicleDetailsModal';
 import TransferVehicleModal from '../components/TransferVehicleModal';
-import { mockVehicles, mockClients } from '../data/mockData';
-import type { Vehicle, AlertStatus, Service } from '../types';
-import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
-import { PlusIcon, SwitchHorizontalIcon } from '../components/Icons';
+import { fetchVehicles, saveVehicle, deleteVehicle, fetchClients, subscribeToVehicles } from '../services/dataService';
+import type { Vehicle, AlertStatus, Service, Client } from '../types';
+import { ServiceStatus } from '../types';
+import { PlusIcon, SwitchHorizontalIcon, LoaderIcon } from '../components/Icons';
 
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
@@ -49,18 +49,45 @@ const ExpirationDate: React.FC<{ date?: string }> = ({ date }) => {
 }
 
 const Vehicles: React.FC = () => {
-    const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
     const [transferringVehicle, setTransferringVehicle] = useState<Vehicle | null>(null);
 
-    const handleSaveVehicle = (vehicleData: Omit<Vehicle, 'id'>) => {
-        const newVehicle: Vehicle = {
-            id: vehicles.length > 0 ? Math.max(...vehicles.map((v: Vehicle) => v.id)) + 1 : 1,
-            ...vehicleData,
+    const loadData = async () => {
+        setIsLoading(true);
+        const [vehicleData, clientData] = await Promise.all([fetchVehicles(), fetchClients()]);
+        setVehicles(vehicleData);
+        setClients(clientData);
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        loadData();
+
+        // Realtime Subscription
+        const subscription = subscribeToVehicles((payload) => {
+            console.log('Realtime Vehicle Change:', payload);
+            loadData(); // Simple reload for now
+        });
+
+        return () => {
+            subscription.unsubscribe();
         };
-        setVehicles([newVehicle, ...vehicles]);
-        setIsFormModalOpen(false);
+    }, []);
+
+    const handleSaveVehicle = async (vehicleData: Omit<Vehicle, 'id'>) => {
+        try {
+            // We need to strip 'ownerName' before saving, as the DB handles the join.
+            const { ownerName, ...dataToSave } = vehicleData;
+            const savedVehicle = await saveVehicle(dataToSave);
+            setVehicles(prev => [savedVehicle, ...prev.filter(v => v.id !== savedVehicle.id)]);
+            setIsFormModalOpen(false);
+        } catch (error) {
+            alert('Erro ao salvar veículo. Verifique o console para detalhes.');
+        }
     };
 
     const handleOpenDetails = (vehicle: Vehicle) => {
@@ -79,23 +106,45 @@ const Vehicles: React.FC = () => {
         setTransferringVehicle(null);
     };
 
-    const handleConfirmTransfer = (vehicleId: number, newOwnerId: number) => {
-        const newOwner = mockClients.find(c => c.id === newOwnerId);
-        if (!newOwner) {
-            alert('Erro: Comprador não encontrado.');
+    const handleDeleteVehicle = async (vehicleId: number) => {
+        if (window.confirm('Tem certeza que deseja excluir este veículo?')) {
+            try {
+                await deleteVehicle(vehicleId);
+                setVehicles(prev => prev.filter(v => v.id !== vehicleId));
+            } catch (error) {
+                alert('Erro ao excluir veículo.');
+            }
+        }
+    };
+
+    const handleConfirmTransfer = async (vehicleId: number, newOwnerId: number) => {
+        const newOwner = clients.find(c => c.id === newOwnerId);
+        const vehicle = vehicles.find(v => v.id === vehicleId);
+
+        if (!newOwner || !vehicle) {
+            alert('Erro: Comprador ou veículo não encontrado.');
             return;
         }
 
-        setVehicles(prevVehicles =>
-            prevVehicles.map(v =>
-                v.id === vehicleId
-                    ? { ...v, ownerId: newOwner.id, ownerName: newOwner.name }
-                    : v
-            )
-        );
+        try {
+            // 1. Update vehicle owner in DB
+            const dataToSave: Omit<Vehicle, 'id' | 'ownerName'> = {
+                ...vehicle,
+                ownerId: newOwner.id,
+            };
+            
+            const updatedVehicle = await saveVehicle(dataToSave, vehicleId);
 
-        const vehicle = vehicles.find(v => v.id === vehicleId);
-        if (vehicle) {
+            // 2. Update local state
+            setVehicles(prevVehicles =>
+                prevVehicles.map(v =>
+                    v.id === vehicleId
+                        ? updatedVehicle
+                        : v
+                )
+            );
+
+            // 3. Create Service and Transaction (using custom events for cross-page communication)
             const newServiceData: Omit<Service, 'id'> = {
                 name: 'Transferência de Propriedade',
                 clientName: newOwner.name,
@@ -105,25 +154,14 @@ const Vehicles: React.FC = () => {
                 price: 850.00,
             };
             
-            const serviceEvent = new CustomEvent('serviceAdded', { detail: newServiceData });
+            const serviceEvent = new CustomEvent('serviceAdded', { detail: { ...newServiceData, clientId: newOwner.id, vehicleId: vehicle.id } });
             window.dispatchEvent(serviceEvent);
 
-            const transactionEvent = new CustomEvent('transactionAdded', { detail: {
-                description: `Serviço: Transferência - ${vehicle.plate}`,
-                category: 'Receita de Serviço',
-                date: new Date().toISOString().split('T')[0],
-                amount: newServiceData.price,
-                type: TransactionType.REVENUE,
-                status: TransactionStatus.PENDING,
-                dueDate: newServiceData.dueDate,
-                serviceId: Math.random(),
-                clientId: newOwner.id,
-            }});
-            window.dispatchEvent(transactionEvent);
+            alert(`Veículo ${vehicle.plate} transferido para ${newOwner.name} com sucesso! Um novo serviço foi criado.`);
+            handleCloseTransfer();
+        } catch (error) {
+            alert('Falha ao realizar a transferência.');
         }
-
-        alert(`Veículo ${vehicle?.plate} transferido para ${newOwner.name} com sucesso! Um novo serviço foi criado.`);
-        handleCloseTransfer();
     };
 
     return (
@@ -152,32 +190,44 @@ const Vehicles: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {vehicles.map((vehicle: Vehicle) => (
-                                <tr key={vehicle.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4">
-                                        <span className="px-3 py-1 bg-gray-200 text-gray-800 font-bold rounded-md border-2 border-gray-300">
-                                            {vehicle.plate}
-                                        </span>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
-                                        <div className="text-sm text-gray-500">{vehicle.color} ({vehicle.yearManufacture}/{vehicle.yearModel})</div>
-                                    </td>
-                                    <td className="p-4">{vehicle.ownerName}</td>
-                                    <td className="p-4 font-mono">{vehicle.renavam}</td>
-                                    <td className="p-4">
-                                        <ExpirationDate date={vehicle.licensingExpirationDate} />
-                                    </td>
-                                    <td className="p-4 space-x-2 flex items-center">
-                                        <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline">Detalhes</button>
-                                        <button onClick={() => handleOpenTransfer(vehicle)} className="text-green-600 hover:underline flex items-center">
-                                            <SwitchHorizontalIcon className="w-4 h-4 mr-1" />
-                                            Transferir
-                                        </button>
-                                        <button className="text-red-500 hover:underline">Excluir</button>
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={6} className="text-center p-8 text-gray-500">
+                                        <LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando veículos do Supabase...
                                     </td>
                                 </tr>
-                            ))}
+                            ) : vehicles.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="text-center p-8 text-gray-500">Nenhum veículo cadastrado.</td>
+                                </tr>
+                            ) : (
+                                vehicles.map((vehicle: Vehicle) => (
+                                    <tr key={vehicle.id} className="border-b hover:bg-gray-50">
+                                        <td className="p-4">
+                                            <span className="px-3 py-1 bg-gray-200 text-gray-800 font-bold rounded-md border-2 border-gray-300">
+                                                {vehicle.plate}
+                                            </span>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
+                                            <div className="text-sm text-gray-500">{vehicle.color} ({vehicle.yearManufacture}/{vehicle.yearModel})</div>
+                                        </td>
+                                        <td className="p-4">{vehicle.ownerName}</td>
+                                        <td className="p-4 font-mono">{vehicle.renavam}</td>
+                                        <td className="p-4">
+                                            <ExpirationDate date={vehicle.licensingExpirationDate} />
+                                        </td>
+                                        <td className="p-4 space-x-2 flex items-center">
+                                            <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline">Detalhes</button>
+                                            <button onClick={() => handleOpenTransfer(vehicle)} className="text-green-600 hover:underline flex items-center">
+                                                <SwitchHorizontalIcon className="w-4 h-4 mr-1" />
+                                                Transferir
+                                            </button>
+                                            <button onClick={() => handleDeleteVehicle(vehicle.id)} className="text-red-500 hover:underline">Excluir</button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -187,7 +237,7 @@ const Vehicles: React.FC = () => {
 
             <TransferVehicleModal 
                 vehicle={transferringVehicle}
-                clients={mockClients}
+                clients={clients}
                 onClose={handleCloseTransfer}
                 onConfirm={handleConfirmTransfer}
             />
@@ -196,7 +246,7 @@ const Vehicles: React.FC = () => {
                 <VehicleForm 
                     onSave={handleSaveVehicle}
                     onCancel={() => setIsFormModalOpen(false)}
-                    clients={mockClients}
+                    clients={clients}
                 />
             </Modal>
         </div>

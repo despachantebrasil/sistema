@@ -3,7 +3,7 @@ import type { Service, Client, Vehicle, ServiceCategory } from '../types';
 import { ServiceStatus } from '../types';
 
 interface ServiceFormProps {
-    onSave: (service: Omit<Service, 'id'>) => void;
+    onSave: (service: Omit<Service, 'id' | 'clientName' | 'vehiclePlate'> & { clientId: number, vehicleId: number }) => void;
     onCancel: () => void;
     clients: Client[];
     vehicles: Vehicle[];
@@ -24,18 +24,10 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
             return;
         }
 
-        const client = clients.find((c: Client) => c.id === Number(clientId));
-        const vehicle = vehicles.find((v: Vehicle) => v.id === Number(vehicleId));
-
-        if (!client || !vehicle) {
-             alert('Cliente ou veículo inválido.');
-            return;
-        }
-
         onSave({
             name: serviceName,
-            clientName: client.name,
-            vehiclePlate: vehicle.plate,
+            clientId: Number(clientId),
+            vehicleId: Number(vehicleId),
             status: ServiceStatus.TODO,
             price: parseFloat(price),
             dueDate,

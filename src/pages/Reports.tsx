@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import { mockServices, mockClients } from '../data/mockData';
-import type { Service } from '../types';
+import { fetchServices, fetchClients } from '../services/dataService';
+import type { Service, Client } from '../types';
 import { ServiceStatus } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LoaderIcon } from '../components/Icons';
 
 interface ReportFilters {
     startDate: string;
@@ -22,6 +23,9 @@ const ReportKpiCard: React.FC<{ title: string; value: string; }> = ({ title, val
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const Reports: React.FC = () => {
+    const [allServices, setAllServices] = useState<Service[]>([]);
+    const [allClients, setAllClients] = useState<Client[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [filters, setFilters] = useState<ReportFilters>({
         startDate: '',
         endDate: new Date().toISOString().split('T')[0],
@@ -30,13 +34,24 @@ const Reports: React.FC = () => {
     });
     const [reportData, setReportData] = useState<Service[] | null>(null);
 
+    useEffect(() => {
+        const loadData = async () => {
+            setIsLoading(true);
+            const [serviceData, clientData] = await Promise.all([fetchServices(), fetchClients()]);
+            setAllServices(serviceData);
+            setAllClients(clientData);
+            setIsLoading(false);
+        };
+        loadData();
+    }, []);
+
     const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
     
     const handleGenerateReport = () => {
-        let filteredServices = mockServices;
+        let filteredServices = allServices;
 
         if (filters.startDate) {
             filteredServices = filteredServices.filter(s => new Date(s.dueDate) >= new Date(filters.startDate));
@@ -48,7 +63,7 @@ const Reports: React.FC = () => {
             filteredServices = filteredServices.filter(s => s.status === filters.status);
         }
         if (filters.clientId !== 'all') {
-            const client = mockClients.find(c => c.id === Number(filters.clientId));
+            const client = allClients.find(c => c.id === Number(filters.clientId));
             if (client) {
                 filteredServices = filteredServices.filter(s => s.clientName === client.name);
             }
@@ -73,15 +88,22 @@ const Reports: React.FC = () => {
             return acc;
         }, {} as Record<string, { name: string; Serviços: number }>);
         return Object.values(monthlyData).sort((a: { name: string }, b: { name: string }) => {
-            const [m1, y1] = a.name.split('/');
-            const [m2, y2] = b.name.split('/');
-            return new Date(`01/${m1}/${y1}`).getTime() - new Date(`01/${m2}/${y2}`).getTime();
+            // Simple sorting by name (month/year)
+            return a.name.localeCompare(b.name);
         });
     }, [reportData]);
 
     const handlePrint = () => {
         window.print();
     };
+
+    if (isLoading) {
+        return (
+            <div className="p-4 md:p-8 text-center text-gray-500">
+                <LoaderIcon className="w-8 h-8 inline mr-2" /> Carregando dados para relatórios...
+            </div>
+        );
+    }
 
     return (
         <div className="p-4 md:p-8 space-y-8">
@@ -107,7 +129,7 @@ const Reports: React.FC = () => {
                         <label htmlFor="clientId" className="block text-sm font-medium text-gray-700">Cliente</label>
                         <select name="clientId" id="clientId" value={filters.clientId} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                             <option value="all">Todos</option>
-                            {mockClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {allClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                 </div>
