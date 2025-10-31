@@ -16,6 +16,33 @@ const handleSupabaseError = (error: any, operation: string) => {
     throw new Error(`Falha ao ${operation} no Supabase: ${error.message}`);
 };
 
+// --- Storage Operations ---
+
+export const uploadAvatar = async (file: File): Promise<string> => {
+    try {
+        const user_id = await getUserId();
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${user_id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            handleSupabaseError(uploadError, 'fazer upload do avatar');
+        }
+
+        const { data } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
+    } catch (e) {
+        throw e;
+    }
+};
+
+
 // --- Client Operations ---
 
 export const fetchClients = async (): Promise<Client[]> => {

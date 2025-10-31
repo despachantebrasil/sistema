@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { fetchClients, saveClient, deleteClient, subscribeToClients } from '../services/dataService';
+import { fetchClients, saveClient, deleteClient, subscribeToClients, uploadAvatar } from '../services/dataService';
 import type { Client } from '../types';
 import { ClientDocStatus, ClientType } from '../types';
 import Card from '../components/ui/Card';
@@ -63,11 +63,17 @@ const Clients: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'docStatus'>) => {
+    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'docStatus' | 'avatarUrl'>, avatarFile: File | null) => {
         try {
-            const savedClient = await saveClient(clientData, editingClient?.id);
+            let avatarUrl = editingClient?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=random&color=fff`;
+
+            if (avatarFile) {
+                avatarUrl = await uploadAvatar(avatarFile);
+            }
+
+            const finalClientData = { ...clientData, avatarUrl };
+            const savedClient = await saveClient(finalClientData, editingClient?.id);
             
-            // Update local state immediately if not using full realtime
             setClients(prev => {
                 if (editingClient) {
                     return prev.map(c => c.id === editingClient.id ? savedClient : c);

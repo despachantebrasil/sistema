@@ -4,7 +4,7 @@ import { ClientType } from '../types';
 import { CameraIcon } from './Icons';
 
 interface ClientFormProps {
-    onSave: (client: Omit<Client, 'id' | 'docStatus'>) => void;
+    onSave: (clientData: Omit<Client, 'id' | 'docStatus' | 'avatarUrl'>, avatarFile: File | null) => void;
     onCancel: () => void;
     client?: Client; // For editing
 }
@@ -49,19 +49,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             return;
         }
 
-        const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
-
-        let avatarUrl = client?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=random&color=fff`;
-        if (avatarFile) {
-            avatarUrl = await toBase64(avatarFile);
-        }
-
-        onSave({ ...formData, avatarUrl, clientType });
+        onSave({ ...formData, clientType }, avatarFile);
     };
 
     const maritalStatusOptions = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'Outro'];
