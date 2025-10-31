@@ -39,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvat
   
   const alertsRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { userRole, logout } = useAuth();
+  const { userRole, userFullName, logout } = useAuth(); // Usando userFullName real
 
   useEffect(() => {
     const loadAlertData = async () => {
@@ -109,8 +109,8 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvat
     logout();
   };
 
-  // Usamos dados mockados do AuthProvider
-  const fullName = 'Admin Mock';
+  // Usamos o nome completo real do AuthProvider
+  const fullName = userFullName;
   const role = userRole; 
   const avatarUrl = userAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName as string)}&background=0D47A1&color=fff`;
 
