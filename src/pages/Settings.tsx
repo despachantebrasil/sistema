@@ -3,7 +3,7 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import { initialPermissions, mockCompanyProfile } from '../data/mockData';
 import type { AppUser, Role, PermissionsMap, CompanyProfile, Page } from '../types';
-import { PlusIcon, EditIcon, TrashIcon, CameraIcon } from '../components/Icons';
+import { PlusIcon, EditIcon, TrashIcon } from '../components/Icons';
 
 type SettingsTab = 'users' | 'permissions' | 'company';
 
@@ -37,7 +37,7 @@ const UserForm: React.FC<{
 
 const UsersTab: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading] = useState(false);
     
     // NOTE: Since we removed mockUsers, we display a placeholder message.
     const users: AppUser[] = [];
