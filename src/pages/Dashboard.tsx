@@ -32,8 +32,8 @@ const KpiCard: React.FC<{ kpi: DashboardKpiV2 }> = ({ kpi }) => {
         </div>
       </div>
       <p className="text-4xl font-bold mt-2">{kpi.value}</p>
-      <p className={`mt-2 text-sm ${colorClasses.text}`}>{kpi.subtitle}</p>
-      <p className={`mt-1 text-sm ${colorClasses.text}`}>{kpi.change}</p>
+      <p className="mt-2 text-sm opacity-80">{kpi.subtitle}</p>
+      <p className="mt-1 text-sm opacity-80">{kpi.change}</p>
     </div>
   );
 };
@@ -211,13 +211,27 @@ const Dashboard: React.FC = () => {
     const activeServices = services.filter(s => s.status === ServiceStatus.IN_PROGRESS || s.status === ServiceStatus.TODO || s.status === ServiceStatus.WAITING_DOCS).length;
     const activeClients = clients.length;
     
-    const updatedKpis: DashboardKpiV2[] = useMemo(() => [
-        { ...dashboardKpisV2[0], value: String(activeClients) },
-        { ...dashboardKpisV2[1], value: String(activeServices) },
-        // Revenue and Alerts KPIs remain static for now as they require more complex transaction/vehicle data processing
-        dashboardKpisV2[2],
-        dashboardKpisV2[3],
-    ], [activeClients, activeServices]);
+    const updatedKpis: DashboardKpiV2[] = useMemo(() => {
+        const kpis = [...dashboardKpisV2]; // Start with mock data
+        
+        // Update Client KPI with real data
+        kpis[0] = { 
+            ...kpis[0], 
+            value: String(activeClients),
+            change: isLoading ? 'Carregando...' : (activeClients > 0 ? 'Dados atualizados' : 'Nenhum cliente'),
+        };
+        
+        // Update Service KPI with real data
+        kpis[1] = { 
+            ...kpis[1], 
+            value: String(activeServices),
+            change: isLoading ? 'Carregando...' : (activeServices > 0 ? 'Dados atualizados' : 'Nenhum processo'),
+        };
+        
+        // Revenue and Alerts KPIs remain static (mocked) for now
+        
+        return kpis;
+    }, [activeClients, activeServices, isLoading]);
 
 
     return (

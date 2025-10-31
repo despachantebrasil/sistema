@@ -73,10 +73,10 @@ export const financialKpis: FinancialKpis = {
 };
 
 export const dashboardKpisV2: DashboardKpiV2[] = [
-    { title: 'Clientes Ativos', value: '0', subtitle: 'Clientes cadastrados', change: 'Carregando...', icon: 'UsersIcon', color: 'blue' },
+    { title: 'Clientes Ativos', value: '1', subtitle: 'Clientes cadastrados', change: 'Carregando...', icon: 'UsersIcon', color: 'blue' },
     { title: 'Processos Ativos', value: '0', subtitle: 'Em andamento', change: 'Carregando...', icon: 'FileTextIcon', color: 'green' },
-    { title: 'Receita Mensal', value: 'R$ 0.00', subtitle: 'Carregando...', change: 'Carregando...', icon: 'DollarSignIcon', color: 'purple' },
-    { title: 'Alertas Pendentes', value: '0', subtitle: 'Requerem atenção', change: 'Carregando...', icon: 'WarningIcon', color: 'orange' },
+    { title: 'Receita Mensal', value: 'R$ 25.780,50', subtitle: 'Meta: R$ 30.000', change: '+12% vs Mês Anterior', icon: 'DollarSignIcon', color: 'purple' },
+    { title: 'Alertas Pendentes', value: '12', subtitle: 'Documentos a vencer', change: 'Foco na regularização', icon: 'WarningIcon', color: 'orange' },
 ];
 
 export const mockNotifications: NotificationItem[] = [
