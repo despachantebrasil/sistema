@@ -1,13 +1,10 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import type { Role } from '../types';
-
-// Definindo um tipo de sessão simples para o modo mock
-interface MockSession {
-    user: { id: string, email: string };
-}
+import { supabase } from '../integrations/supabase/client';
+import { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  session: MockSession | null;
+  session: Session | null;
   isLoading: boolean;
   userRole: Role;
   userAvatarUrl: string | null;
@@ -25,41 +22,57 @@ export const useAuth = () => {
   return context;
 };
 
-const defaultMockUser = {
-    id: 'mock-admin-id',
-    email: 'admin@urtech.com',
-    fullName: 'Admin Mock',
-    role: 'Administrador' as Role,
-    avatarUrl: 'https://ui-avatars.com/api/?name=Admin+Mock&background=0D47A1&color=fff'
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<MockSession | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<{ role: Role, avatar_url: string | null } | null>(null);
 
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role, avatar_url')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+    } else if (data) {
+      setProfile({ role: data.role as Role, avatar_url: data.avatar_url });
+    }
+  };
+
   useEffect(() => {
-    // Simula a verificação de sessão (pode ser baseado em localStorage se necessário)
-    setIsLoading(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        fetchProfile(session.user.id);
+      }
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Simulação de login bem-sucedido com qualquer credencial
-    if (email && password) {
-        setSession({ user: { id: defaultMockUser.id, email: defaultMockUser.email } });
-        setProfile({ role: defaultMockUser.role, avatar_url: defaultMockUser.avatarUrl });
-        setIsLoading(false);
-        return true;
-    }
-    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setIsLoading(false);
-    return false;
+    return !error;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
   };
