@@ -226,8 +226,6 @@ export const fetchServices = async (): Promise<Service[]> => {
             clientName: s.client?.name || 'Desconhecido',
             vehiclePlate: s.vehicle?.plate || 'Desconhecido',
             dueDate: s.due_date,
-            clientId: s.client_id, // Mapeamento adicionado
-            vehicleId: s.vehicle_id, // Mapeamento adicionado
         })) as Service[];
     } catch (e) {
         console.error(e);
@@ -271,8 +269,6 @@ export const saveService = async (serviceData: Omit<Service, 'id' | 'clientName'
             clientName: savedService.client?.name || 'Desconhecido',
             vehiclePlate: savedService.vehicle?.plate || 'Desconhecido',
             dueDate: savedService.due_date,
-            clientId: savedService.client_id, // Mapeamento adicionado
-            vehicleId: savedService.vehicle_id, // Mapeamento adicionado
         } as Service;
     } catch (e) {
         throw e;

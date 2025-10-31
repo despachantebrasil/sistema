@@ -3,10 +3,10 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import ServiceForm from '../components/ServiceForm';
 import { serviceCatalog } from '../data/mockData';
-import { fetchServices, saveService, fetchClients, fetchVehicles, subscribeToServices, deleteService } from '../services/dataService';
+import { fetchServices, saveService, fetchClients, fetchVehicles, subscribeToServices } from '../services/dataService';
 import type { Service, Transaction, Client, Vehicle } from '../types';
 import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
-import { PlusIcon, LoaderIcon, EditIcon, TrashIcon, ChevronDownIcon } from '../components/Icons';
+import { PlusIcon, LoaderIcon } from '../components/Icons';
 
 const getStatusBadge = (status: ServiceStatus) => {
     switch (status) {
@@ -31,7 +31,6 @@ const Services: React.FC = () => {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingService, setEditingService] = useState<Service | null>(null);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -60,82 +59,39 @@ const Services: React.FC = () => {
         };
     }, []);
 
-    const handleOpenModal = (service: Service | null = null) => {
-        setEditingService(service);
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setEditingService(null);
-        setIsModalOpen(false);
-    };
-
-    const handleSaveService = async (serviceData: Omit<Service, 'id' | 'clientName' | 'vehiclePlate'> & { clientId: number, vehicleId: number }) => {
+    const handleAddService = async (newServiceData: Omit<Service, 'id' | 'clientName' | 'vehiclePlate'> & { clientId: number, vehicleId: number }) => {
         try {
-            const client = clients.find(c => c.id === serviceData.clientId);
-            const vehicle = vehicles.find(v => v.id === serviceData.vehicleId);
+            const client = clients.find(c => c.id === newServiceData.clientId);
+            const vehicle = vehicles.find(v => v.id === newServiceData.vehicleId);
 
             if (!client || !vehicle) {
                 alert('Erro: Cliente ou veículo não encontrado.');
                 return;
             }
 
-            const savedService = await saveService(serviceData, editingService?.id);
+            const savedService = await saveService(newServiceData);
             
             // Update local state
-            setServices(prev => {
-                if (editingService) {
-                    return prev.map(s => s.id === editingService.id ? savedService : s);
-                }
-                return [savedService, ...prev];
-            });
-            handleCloseModal();
+            setServices(prev => [savedService, ...prev]);
+            setIsModalOpen(false);
 
             // --- Financial Integration (Dispatching event for Financial page) ---
-            if (!editingService) {
-                const newTransactionData: Omit<Transaction, 'id'> = {
-                    description: `Serviço: ${savedService.name} - ${savedService.vehiclePlate}`,
-                    category: 'Receita de Serviço',
-                    date: new Date().toISOString().split('T')[0],
-                    amount: savedService.price,
-                    type: TransactionType.REVENUE,
-                    status: TransactionStatus.PENDING,
-                    dueDate: savedService.dueDate,
-                    serviceId: savedService.id,
-                    clientId: serviceData.clientId,
-                };
-                const event = new CustomEvent('transactionAdded', { detail: newTransactionData });
-                window.dispatchEvent(event);
-            }
+            const newTransactionData: Omit<Transaction, 'id'> = {
+                description: `Serviço: ${savedService.name} - ${savedService.vehiclePlate}`,
+                category: 'Receita de Serviço',
+                date: new Date().toISOString().split('T')[0],
+                amount: savedService.price,
+                type: TransactionType.REVENUE,
+                status: TransactionStatus.PENDING,
+                dueDate: savedService.dueDate,
+                serviceId: savedService.id,
+                clientId: newServiceData.clientId, // Use clientId from input data
+            };
+            const event = new CustomEvent('transactionAdded', { detail: newTransactionData });
+            window.dispatchEvent(event);
 
         } catch (error) {
             alert('Erro ao salvar serviço. Verifique o console para detalhes.');
-        }
-    };
-
-    const handleDeleteService = async (serviceId: number) => {
-        if (window.confirm('Tem certeza que deseja excluir este serviço? Esta ação é irreversível.')) {
-            try {
-                await deleteService(serviceId);
-                setServices(prev => prev.filter(s => s.id !== serviceId));
-            } catch (error) {
-                alert('Erro ao excluir serviço.');
-            }
-        }
-    };
-
-    const handleUpdateStatus = async (service: Service, newStatus: ServiceStatus) => {
-        try {
-            const updatedService = await saveService({
-                ...service,
-                clientId: service.clientId!, // Assuming clientId exists after fetch
-                vehicleId: service.vehicleId!, // Assuming vehicleId exists after fetch
-                status: newStatus,
-            }, service.id);
-
-            setServices(prev => prev.map(s => s.id === service.id ? updatedService : s));
-        } catch (error) {
-            alert('Erro ao atualizar status.');
         }
     };
 
@@ -145,7 +101,7 @@ const Services: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                     <h2 className="text-xl font-bold">Lista de Serviços</h2>
                     <button 
-                        onClick={() => handleOpenModal(null)}
+                        onClick={() => setIsModalOpen(true)}
                         className="flex items-center justify-center btn-hover"
                     >
                         <PlusIcon className="w-5 h-5 mr-2" />
@@ -184,36 +140,15 @@ const Services: React.FC = () => {
                                             <div className="text-sm text-gray-500">{service.vehiclePlate}</div>
                                         </td>
                                         <td className="p-4">
-                                            <div className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(service.status)}`}>
+                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(service.status)}`}>
                                                 {service.status}
-                                            </div>
+                                            </span>
                                         </td>
                                         <td className="p-4">{new Date(service.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                                         <td className="p-4 font-medium">{service.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                                        <td className="p-4 space-x-2 flex items-center">
-                                            <div className="relative inline-block text-left">
-                                                <button className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none group">
-                                                    Status <ChevronDownIcon className="-mr-1 ml-2 h-5 w-5" />
-                                                    <div className="absolute right-0 mt-10 w-40 bg-white border rounded-md shadow-lg z-10 hidden group-focus-within:block">
-                                                        {Object.values(ServiceStatus).map(status => (
-                                                            <a 
-                                                                key={status}
-                                                                href="#"
-                                                                onClick={(e) => { e.preventDefault(); handleUpdateStatus(service, status); }}
-                                                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                                            >
-                                                                {status}
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                </button>
-                                            </div>
-                                            <button onClick={() => handleOpenModal(service)} className="text-primary p-1 hover:bg-gray-200 rounded-full" title="Editar">
-                                                <EditIcon className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => handleDeleteService(service.id)} className="text-red-500 p-1 hover:bg-gray-200 rounded-full" title="Excluir">
-                                                <TrashIcon className="w-4 h-4" />
-                                            </button>
+                                        <td className="p-4 space-x-2">
+                                            <button className="text-primary hover:underline">Ver</button>
+                                            <button className="text-red-500 hover:underline">Cancelar</button>
                                         </td>
                                     </tr>
                                 ))
@@ -223,15 +158,13 @@ const Services: React.FC = () => {
                 </div>
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingService ? "Editar Serviço" : "Adicionar Novo Serviço"}>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Adicionar Novo Serviço">
                 <ServiceForm 
-                    onSave={handleSaveService} 
-                    onCancel={handleCloseModal}
+                    onSave={handleAddService} 
+                    onCancel={() => setIsModalOpen(false)}
                     clients={clients}
                     vehicles={vehicles}
                     serviceCatalog={serviceCatalog}
-                    // Note: ServiceForm currently doesn't support editing existing data, 
-                    // but we pass the data structure needed for saving.
                 />
             </Modal>
         </div>

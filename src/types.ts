@@ -61,8 +61,6 @@ export interface Service {
   status: ServiceStatus;
   dueDate: string; // YYYY-MM-DD
   price: number;
-  clientId: number; // Adicionado
-  vehicleId: number; // Adicionado
 }
 
 export interface ServiceCategory {
