@@ -80,7 +80,9 @@ export const dashboardKpisV2: DashboardKpiV2[] = [
 ];
 
 export const mockNotifications: NotificationItem[] = [
-    { id: 1, title: 'Carregando Dados', description: 'Aguarde a sincronização com o Supabase.', color: 'blue' },
+    { id: 1, title: 'Licenciamentos Vencendo', description: '1 veículo com vencimento em 10 dias (ABC-1234).', color: 'orange' },
+    { id: 2, title: 'Documentos Pendentes', description: '1 processo aguardando documentação (Emplacamento).', color: 'blue' },
+    { id: 3, title: 'Pagamentos Recebidos', description: 'R$ 850,00 recebidos hoje.', color: 'green' },
 ];
 
 
