@@ -8,7 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   userRole: Role;
   userAvatarUrl: string | null;
-  userFullName: string; // Adicionado nome completo
+  userFullName: string;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
@@ -49,13 +49,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        fetchProfile(session.user.id);
-      }
-      setIsLoading(false);
-    });
+    const loadSessionAndProfile = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        
+        if (session) {
+            await fetchProfile(session.user.id);
+        }
+        
+        // Only set isLoading to false after checking session and profile
+        setIsLoading(false);
+    };
+
+    loadSessionAndProfile();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -64,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setProfile(null);
       }
-      setIsLoading(false);
+      // Note: We don't set isLoading here, as it's handled by the initial load or subsequent navigation.
     });
 
     return () => subscription.unsubscribe();
