@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
-import VehicleDetailsModal from '../components/VehicleDetailsModal';
-import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; // Importando o novo componente
+import VehicleDetailsModal from '../components/VehicleDetailsModal'; 
+import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; 
 import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
 import { PlusIcon, LoaderIcon, EditIcon } from '../components/Icons';
 import { fetchVehicles, createVehicle, fetchClients, deleteVehicle } from '../services/supabase';

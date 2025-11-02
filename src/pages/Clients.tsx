@@ -4,6 +4,7 @@ import { ClientDocStatus, ClientType } from '../types';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import ClientForm from '../components/ClientForm';
+import ClientDetailsModal from '../components/ClientDetailsModal'; // Importando o novo modal
 import { PlusIcon, EditIcon, TrashIcon, MoreVerticalIcon, SearchIcon, LoaderIcon } from '../components/Icons';
 import { fetchClients, createClient, updateClient, deleteClient } from '../services/supabase';
 
@@ -19,8 +20,9 @@ const getStatusBadge = (status: ClientDocStatus) => {
 
 const Clients: React.FC = () => {
     const [clients, setClients] = useState<Client[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
+    const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
 
@@ -49,14 +51,23 @@ const Clients: React.FC = () => {
         );
     }, [clients, searchTerm]);
 
-    const handleOpenModal = (client: Client | null) => {
+    const handleOpenFormModal = (client: Client | null) => {
         setEditingClient(client);
-        setIsModalOpen(true);
+        setIsFormModalOpen(true);
     };
 
-    const handleCloseModal = () => {
+    const handleCloseFormModal = () => {
         setEditingClient(null);
-        setIsModalOpen(false);
+        setIsFormModalOpen(false);
+    };
+    
+    const handleOpenDetailsModal = (client: Client) => {
+        setSelectedClient(client);
+        // A variável isDetailsModalOpen não é mais necessária, pois o modal é controlado por 'selectedClient'
+    };
+    
+    const handleCloseDetailsModal = () => {
+        setSelectedClient(null);
     };
 
     // Corrigido o tipo de clientData para incluir doc_status, conforme retornado pelo ClientForm
@@ -101,7 +112,7 @@ const Clients: React.FC = () => {
                                 className="pl-10 pr-4 py-2 border rounded-lg focus:ring-primary focus:border-primary"
                             />
                         </div>
-                        <button onClick={() => handleOpenModal(null)} className="btn-hover flex items-center justify-center">
+                        <button onClick={() => handleOpenFormModal(null)} className="btn-hover flex items-center justify-center">
                             <PlusIcon className="w-5 h-5 mr-2" />
                             Novo Cliente
                         </button>
@@ -153,10 +164,11 @@ const Clients: React.FC = () => {
                                         <td className="p-4">{getStatusBadge(client.doc_status)}</td>
                                         <td className="p-4 text-center">
                                             <div className="relative inline-block">
+                                                <button onClick={() => handleOpenDetailsModal(client)} className="text-primary hover:underline mr-2">Detalhes</button>
                                                 <button className="p-2 hover:bg-gray-200 rounded-full group">
                                                     <MoreVerticalIcon className="w-5 h-5 text-gray-600" />
                                                     <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-xl z-10 hidden group-focus-within:block">
-                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleOpenModal(client); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleOpenFormModal(client); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                             <EditIcon className="w-4 h-4 mr-2" /> Editar
                                                         </a>
                                                         <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteClient(client.id, client.name); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
@@ -174,13 +186,18 @@ const Clients: React.FC = () => {
                 </div>
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingClient ? 'Editar Cliente' : 'Adicionar Novo Cliente'}>
+            <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingClient ? 'Editar Cliente' : 'Adicionar Novo Cliente'}>
                 <ClientForm
                     onSave={handleSaveClient}
-                    onCancel={handleCloseModal}
+                    onCancel={handleCloseFormModal}
                     client={editingClient || undefined}
                 />
             </Modal>
+            
+            <ClientDetailsModal 
+                client={selectedClient} 
+                onClose={handleCloseDetailsModal} 
+            />
         </div>
     );
 };
