@@ -178,20 +178,20 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
             
-            {/* Seção 4: Categoria, Potência/Cilindrada e Vencimento Licenciamento (3 colunas) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
+            {/* Seção 4: Categoria (1/4), Potência/Cilindrada (1/4) e Vencimento Licenciamento (2/4) */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-1">
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoria</label>
                     <select id="category" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                         <option value="">Selecione...</option>
                         {categoryOptions.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
-                <div>
+                <div className="md:col-span-1">
                     <label htmlFor="capacity_power_cc" className="block text-sm font-medium text-gray-700">Potência/Cilindrada</label>
                     <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="EX: 100 CV / 1000 CC" />
                 </div>
-                <div>
+                <div className="md:col-span-2">
                     <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
                     <input type="date" name="licensing_expiration_date" id="licensing_expiration_date" value={formData.licensing_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
