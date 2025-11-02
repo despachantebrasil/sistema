@@ -5,10 +5,11 @@ import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal from '../components/VehicleDetailsModal'; 
 import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; 
 import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
-import { PlusIcon, LoaderIcon, EditIcon } from '../components/Icons';
+import { PlusIcon, LoaderIcon, EditIcon, PrinterIcon } from '../components/Icons';
 import { fetchVehicles, createVehicle, fetchClients, deleteVehicle } from '../services/supabase';
+import { printComponent } from '../utils/printUtils';
+import PrintableVehicleList from '../components/PrintableVehicleList';
 
-// Helper function to determine alert status (kept local as it's UI logic)
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
   const today = new Date();
@@ -47,7 +48,6 @@ const ExpirationDate: React.FC<{ date?: string }> = ({ date }) => {
     return <span className={textColor}>{formattedDate}</span>;
 }
 
-// Definindo o tipo Vehicle com o nome do proprietário para uso na tabela
 type VehicleWithOwnerName = Vehicle & { ownerName: string };
 
 const Vehicles: React.FC = () => {
@@ -67,7 +67,6 @@ const Vehicles: React.FC = () => {
             ]);
             setClients(clientData);
             
-            // Map vehicles to include ownerName for display purposes
             const vehiclesWithNames: VehicleWithOwnerName[] = vehicleData.map(v => {
                 const owner = clientData.find(c => c.id === v.owner_id);
                 return {
@@ -125,7 +124,11 @@ const Vehicles: React.FC = () => {
     
     const handleCloseModal = () => {
         setIsFormModalOpen(false);
-        setPrefilledData(undefined); // Limpa os dados pré-preenchidos ao fechar
+        setPrefilledData(undefined);
+    };
+
+    const handlePrintList = () => {
+        printComponent(PrintableVehicleList, { vehicles });
     };
 
     return (
@@ -138,6 +141,10 @@ const Vehicles: React.FC = () => {
                             onDataExtracted={handleDataExtracted}
                             onError={(message) => alert(`Erro: ${message}`)}
                         />
+                        <button onClick={handlePrintList} className="btn-scale bg-gray-600 hover:bg-gray-700 flex items-center justify-center">
+                            <PrinterIcon className="w-5 h-5 mr-2" />
+                            Imprimir Lista
+                        </button>
                         <button 
                             onClick={() => setIsFormModalOpen(true)}
                             className="flex items-center justify-center btn-hover"
@@ -201,7 +208,7 @@ const Vehicles: React.FC = () => {
                     onSave={handleSaveVehicle}
                     onCancel={handleCloseModal}
                     clients={clients}
-                    prefilledData={prefilledData} // Passando os dados para o formulário
+                    prefilledData={prefilledData}
                 />
             </Modal>
         </div>

@@ -4,10 +4,11 @@ import { ClientDocStatus, ClientType } from '../types';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import ClientForm from '../components/ClientForm';
-import ClientDetailsModal, { PrintableClientDetails } from '../components/ClientDetailsModal'; // Importando PrintableClientDetails
+import ClientDetailsModal, { PrintableClientDetails } from '../components/ClientDetailsModal';
 import { PlusIcon, EditIcon, TrashIcon, MoreVerticalIcon, SearchIcon, LoaderIcon, PrinterIcon } from '../components/Icons';
 import { fetchClients, createClient, updateClient, deleteClient } from '../services/supabase';
-import { printComponent } from '../utils/printUtils'; // Importando o utilitário de impressão
+import { printComponent } from '../utils/printUtils';
+import PrintableClientList from '../components/PrintableClientList';
 
 const getStatusBadge = (status: ClientDocStatus) => {
     const statusMap: Record<ClientDocStatus, { text: string; className: string }> = {
@@ -74,7 +75,10 @@ const Clients: React.FC = () => {
         printComponent(PrintableClientDetails, { client });
     };
 
-    // Corrigido o tipo de clientData para incluir doc_status, conforme retornado pelo ClientForm
+    const handlePrintList = () => {
+        printComponent(PrintableClientList, { clients: filteredClients });
+    };
+
     const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null) => {
         try {
             if (editingClient) {
@@ -82,9 +86,9 @@ const Clients: React.FC = () => {
             } else {
                 await createClient(clientData, avatarFile);
             }
-            await loadClients(); // Recarrega a lista após salvar
+            await loadClients();
         } catch (error) {
-            throw error; // Deixa o erro ser tratado pelo formulário
+            throw error;
         }
     };
 
@@ -116,6 +120,10 @@ const Clients: React.FC = () => {
                                 className="pl-10 pr-4 py-2 border rounded-lg focus:ring-primary focus:border-primary"
                             />
                         </div>
+                        <button onClick={handlePrintList} className="btn-scale bg-gray-600 hover:bg-gray-700 flex items-center justify-center">
+                            <PrinterIcon className="w-5 h-5 mr-2" />
+                            Imprimir Lista
+                        </button>
                         <button onClick={() => handleOpenFormModal(null)} className="btn-hover flex items-center justify-center">
                             <PlusIcon className="w-5 h-5 mr-2" />
                             Novo Cliente
@@ -132,15 +140,14 @@ const Clients: React.FC = () => {
                                 <th className="p-4 font-semibold">Contato</th>
                                 <th className="p-4 font-semibold">CPF/CNPJ</th>
                                 <th className="p-4 font-semibold">Status Doc.</th>
-                                <th className="p-4 font-semibold text-center">Imprimir</th> {/* NOVA COLUNA */}
                                 <th className="p-4 font-semibold text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={7} className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando clientes...</td></tr>
+                                <tr><td colSpan={6} className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando clientes...</td></tr>
                             ) : filteredClients.length === 0 ? (
-                                <tr><td colSpan={7} className="text-center p-8 text-gray-500">Nenhum cliente encontrado.</td></tr>
+                                <tr><td colSpan={6} className="text-center p-8 text-gray-500">Nenhum cliente encontrado.</td></tr>
                             ) : (
                                 filteredClients.map(client => (
                                     <tr key={client.id} className="border-b hover:bg-gray-50">
@@ -167,18 +174,6 @@ const Clients: React.FC = () => {
                                         </td>
                                         <td className="p-4 text-sm">{client.cpf_cnpj}</td>
                                         <td className="p-4">{getStatusBadge(client.doc_status)}</td>
-                                        
-                                        {/* NOVA CÉLULA DE IMPRESSÃO */}
-                                        <td className="p-4 text-center">
-                                            <button 
-                                                onClick={() => handlePrintClient(client)} 
-                                                className="text-gray-600 p-2 hover:bg-gray-200 rounded-full"
-                                                title="Imprimir Cadastro"
-                                            >
-                                                <PrinterIcon className="w-5 h-5" />
-                                            </button>
-                                        </td>
-                                        
                                         <td className="p-4 text-center">
                                             <div className="relative inline-block">
                                                 <button onClick={() => handleOpenDetailsModal(client)} className="text-primary hover:underline mr-2">Detalhes</button>
