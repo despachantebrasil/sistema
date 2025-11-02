@@ -32,6 +32,7 @@ export interface Client {
   profession?: string;
   nationality?: string;
   naturalness?: string;
+  cnh_number?: string;
   cnh_expiration_date?: string; // YYYY-MM-DD, Alterado para snake_case
   trade_name?: string; // Nome Fantasia for Pessoa Jurídica, Alterado para snake_case
   contact_name?: string; // Nome do Contato for Pessoa Jurídica, Alterado para snake_case

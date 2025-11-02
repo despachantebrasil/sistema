@@ -61,6 +61,7 @@ export const PrintableClientDetails: React.FC<{ client: Client }> = ({ client })
                         <DetailItem label="Profissão" value={client.profession} uppercase />
                         <DetailItem label="Nacionalidade" value={client.nationality} uppercase />
                         <DetailItem label="Naturalidade" value={client.naturalness} uppercase />
+                        <DetailItem label="Nº Registro CNH" value={client.cnh_number} />
                         <DetailItem label="Vencimento CNH" value={client.cnh_expiration_date ? new Date(client.cnh_expiration_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'} />
                     </div>
                 </>

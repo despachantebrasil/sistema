@@ -27,6 +27,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         cpf_cnpj: client?.cpf_cnpj || '',
         trade_name: client?.trade_name || '',
         contact_name: client?.contact_name || '',
+        cnh_number: client?.cnh_number || '',
         cnh_expiration_date: client?.cnh_expiration_date || '',
         avatar_url: client?.avatar_url || '',
     });
@@ -50,6 +51,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                 cpf_cnpj: client.cpf_cnpj,
                 trade_name: client.trade_name || '',
                 contact_name: client.contact_name || '',
+                cnh_number: client.cnh_number || '',
                 cnh_expiration_date: client.cnh_expiration_date || '',
                 avatar_url: client.avatar_url,
             });
@@ -94,6 +96,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                 data.profession,
                 data.nationality,
                 data.naturalness,
+                data.cnh_number,
                 data.cnh_expiration_date,
             ]);
         } else if (type === ClientType.COMPANY) {
@@ -235,9 +238,15 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                             <UppercaseInput type="text" name="naturalness" id="naturalness" value={formData.naturalness} onChange={handleChange} />
                         </div>
                     </div>
-                    <div>
-                        <label htmlFor="cnh_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento CNH</label>
-                        <input type="date" name="cnh_expiration_date" id="cnh_expiration_date" value={formData.cnh_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="cnh_number" className="block text-sm font-medium text-gray-700">Nº Registro CNH</label>
+                            <UppercaseInput type="text" name="cnh_number" id="cnh_number" value={formData.cnh_number} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label htmlFor="cnh_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento CNH</label>
+                            <input type="date" name="cnh_expiration_date" id="cnh_expiration_date" value={formData.cnh_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        </div>
                     </div>
                 </>
             )}
