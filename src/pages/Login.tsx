@@ -17,6 +17,8 @@ const Login: React.FC = () => {
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}
           providers={[]}
+          view="sign_in" // Força a visualização de login
+          showLinks={false} // Remove links como 'Esqueceu sua senha?' e 'Não tem uma conta? Registre-se'
           localization={{
             variables: {
               sign_in: {
