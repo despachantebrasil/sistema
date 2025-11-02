@@ -1,6 +1,6 @@
 import { supabase } from '../integrations/supabase/client';
 import type { AppUser, Role, Client, Vehicle, Service, Transaction } from '../types';
-import { ClientDocStatus, ServiceStatus, TransactionType, TransactionStatus } from '../types';
+import { ClientDocStatus, ServiceStatus, TransactionType, TransactionStatus, ClientType } from '../types';
 
 // --- Auth & User Management Functions ---
 
@@ -161,11 +161,27 @@ export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | '
             avatar_url = publicUrl;
         }
     }
+    
+    // Determine initial doc_status based on client type and key fields
+    let initialDocStatus = ClientDocStatus.IN_PROGRESS;
+
+    if (clientData.client_type === ClientType.INDIVIDUAL) {
+        // Check if CNH expiration date is provided for individuals
+        if (clientData.cnh_expiration_date) {
+            initialDocStatus = ClientDocStatus.COMPLETED;
+        }
+    } else if (clientData.client_type === ClientType.COMPANY) {
+        // Check if trade name and contact name are provided for companies
+        if (clientData.trade_name && clientData.contact_name) {
+            initialDocStatus = ClientDocStatus.COMPLETED;
+        }
+    }
+
 
     const payload = {
         ...clientData,
         user_id: userId,
-        doc_status: ClientDocStatus.PENDING,
+        doc_status: initialDocStatus, // Use the dynamically determined status
         avatar_url,
     };
 

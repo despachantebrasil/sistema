@@ -2,9 +2,11 @@ import type { ExtractedVehicleData } from '../types';
 
 /**
  * Simula uma chamada à API Gemini para extrair dados estruturados de um documento de veículo.
+ * @param documentContent O conteúdo de texto extraído do documento PDF.
  * @returns Uma promessa que resolve com os dados do veículo extraídos.
  */
-export const extractVehicleDataFromDocument = async (): Promise<ExtractedVehicleData> => {
+export const extractVehicleDataFromDocument = async (documentContent: string): Promise<ExtractedVehicleData> => {
+    // @ts-ignore: documentContent é usado na implementação real da IA, mas não no mock.
     console.log("Enviando conteúdo do documento para análise da IA...");
     
     // Simula um atraso de rede para a chamada da API

@@ -3,9 +3,12 @@ import { SparklesIcon, LoaderIcon } from './Icons';
 import { extractVehicleDataFromDocument } from '../services/geminiService';
 import type { ExtractedVehicleData } from '../types';
 import * as pdfjsLib from 'pdfjs-dist';
+// Importa o caminho do worker diretamente do pacote instalado
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
 // Configuração do worker para o pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Usando o caminho importado para garantir que o Vite resolva corretamente
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface VehicleDocumentUploadProps {
     onDataExtracted: (data: ExtractedVehicleData) => void;
