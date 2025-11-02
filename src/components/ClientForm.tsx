@@ -5,7 +5,6 @@ import { CameraIcon } from './Icons';
 
 interface ClientFormProps {
     // O onSave agora espera o payload completo (Omitindo apenas id, user_id e created_at)
-    // O doc_status é incluído porque é calculado e enviado.
     onSave: (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null) => Promise<void>;
     onCancel: () => void;
     client?: Client; // For editing
@@ -70,39 +69,43 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     };
     
     const checkDocumentationStatus = (data: typeof formData, type: ClientType): ClientDocStatus => {
-        const requiredFields = [
+        // 1. Campos estritamente obrigatórios para qualquer status > PENDENTE
+        const coreRequiredFields = [
             data.name,
             data.phone,
             data.email,
-            data.address,
             data.cpf_cnpj,
         ];
 
-        if (requiredFields.some(field => !field || field.trim() === '')) {
+        // Se algum campo principal estiver faltando, o status é PENDENTE
+        if (coreRequiredFields.some(field => !field || field.trim() === '')) {
             return ClientDocStatus.PENDING;
         }
+        
+        // 2. Campos de detalhe para status COMPLETO
+        let detailFields: (string | number | undefined)[] = [data.address];
 
         if (type === ClientType.INDIVIDUAL) {
-            const individualFields = [
+            detailFields = detailFields.concat([
                 data.marital_status,
                 data.profession,
                 data.nationality,
                 data.naturalness,
                 data.cnh_expiration_date,
-            ];
-            if (individualFields.some(field => !field || field.trim() === '')) {
-                return ClientDocStatus.IN_PROGRESS;
-            }
+            ]);
         } else if (type === ClientType.COMPANY) {
-            const companyFields = [
+            detailFields = detailFields.concat([
                 data.trade_name,
                 data.contact_name,
-            ];
-            if (companyFields.some(field => !field || field.trim() === '')) {
-                return ClientDocStatus.IN_PROGRESS;
-            }
+            ]);
         }
         
+        // Se algum campo de detalhe estiver faltando (ou for uma string vazia), o status é EM ANDAMENTO
+        if (detailFields.some(field => !field || (typeof field === 'string' && field.trim() === ''))) {
+            return ClientDocStatus.IN_PROGRESS;
+        }
+        
+        // Se todos os campos principais e de detalhe estiverem preenchidos
         return ClientDocStatus.COMPLETED;
     };
 
