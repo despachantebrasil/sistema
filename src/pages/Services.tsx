@@ -25,9 +25,6 @@ const getStatusBadge = (status: ServiceStatus) => {
     }
 };
 
-// Definindo o tipo de serviço com detalhes do cliente/veículo para a tabela
-type ServiceWithDetails = Service & { clientName: string; vehiclePlate: string };
-
 const Services: React.FC = () => {
     const [services, setServices] = useState<Service[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
@@ -61,40 +58,23 @@ const Services: React.FC = () => {
         loadData();
     }, [loadData]);
 
-    const servicesWithDetails: ServiceWithDetails[] = useMemo(() => {
+    const servicesWithDetails = useMemo(() => {
         return services.map(service => {
             const client = clientMap.get(service.client_id || 0);
             const vehicle = vehicleMap.get(service.vehicle_id || 0);
-            
-            // Mapeamento de snake_case para camelCase para o componente
             return {
-                ...service, // Inclui todas as propriedades snake_case do Supabase
+                ...service,
                 clientName: client?.name || 'Cliente Desconhecido',
                 vehiclePlate: vehicle?.plate || 'Veículo Desconhecido',
-            } as ServiceWithDetails;
+            };
         });
     }, [services, clientMap, vehicleMap]);
 
-    // O tipo de dado recebido do formulário é ServiceFormPayload (snake_case)
-    const handleAddService = async (newServiceData: Omit<Service, 'id' | 'user_id' | 'created_at'>) => {
+    const handleAddService = async (newServiceData: Omit<Service, 'id' | 'user_id' | 'status' | 'created_at'>) => {
         try {
-            // 1. Cria o Serviço no DB
-            // O payload já está no formato snake_case esperado pelo createService
-            const servicePayload: Omit<Service, 'id' | 'user_id' | 'created_at'> = {
-                name: newServiceData.name,
-                client_id: newServiceData.client_id,
-                vehicle_id: newServiceData.vehicle_id,
-                price: newServiceData.price,
-                due_date: newServiceData.due_date,
-                payer_client_id: newServiceData.payer_client_id,
-                payer_client_name: newServiceData.payer_client_name,
-                status: ServiceStatus.TODO, // Adicionado status, que é obrigatório
-            };
-            const savedService = await createService(servicePayload);
+            const savedService = await createService(newServiceData);
 
-            // 2. Cria a Transação Financeira
-            const transactionClientId = savedService.payer_client_id || savedService.client_id;
-            
+            // --- Financial Integration ---
             const newTransactionData: Omit<Transaction, 'id' | 'user_id' | 'created_at'> = {
                 description: `Serviço: ${savedService.name} - ${vehicleMap.get(savedService.vehicle_id || 0)?.plate || 'N/A'}`,
                 category: 'Receita de Serviço',
@@ -104,12 +84,11 @@ const Services: React.FC = () => {
                 status: TransactionStatus.PENDING,
                 due_date: savedService.due_date,
                 service_id: savedService.id,
-                client_id: transactionClientId,
+                client_id: savedService.client_id,
             };
             await createTransaction(newTransactionData);
             
             await loadData(); // Recarrega a lista após salvar
-            setIsModalOpen(false);
         } catch (error) {
             throw error;
         }
@@ -133,7 +112,7 @@ const Services: React.FC = () => {
                         <thead>
                             <tr className="border-b bg-gray-50">
                                 <th className="p-4 font-semibold">Serviço</th>
-                                <th className="p-4 font-semibold">Cliente / Pagador</th>
+                                <th className="p-4 font-semibold">Cliente / Veículo</th>
                                 <th className="p-4 font-semibold">Status</th>
                                 <th className="p-4 font-semibold">Prazo</th>
                                 <th className="p-4 font-semibold">Valor</th>
@@ -152,11 +131,6 @@ const Services: React.FC = () => {
                                         <td className="p-4">
                                             <div>{service.clientName}</div>
                                             <div className="text-sm text-gray-500">{service.vehiclePlate}</div>
-                                            {service.payer_client_name && service.payer_client_name !== service.clientName && (
-                                                <div className="text-xs text-blue-600 font-semibold mt-1">
-                                                    Pagador: {service.payer_client_name}
-                                                </div>
-                                            )}
                                         </td>
                                         <td className="p-4">
                                             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(service.status)}`}>
@@ -179,7 +153,7 @@ const Services: React.FC = () => {
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Adicionar Novo Serviço">
                 <ServiceForm 
-                    onSave={handleAddService as (service: any) => Promise<void>} 
+                    onSave={handleAddService} 
                     onCancel={() => setIsModalOpen(false)}
                     clients={clients}
                     vehicles={vehicles}

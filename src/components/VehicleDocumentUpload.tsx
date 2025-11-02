@@ -2,17 +2,15 @@ import React, { useState, useRef } from 'react';
 import { SparklesIcon, LoaderIcon } from './Icons';
 import { extractVehicleDataFromDocument } from '../services/geminiService';
 import type { ExtractedVehicleData } from '../types';
-import * as pdfjsLib from 'pdfjs-dist'; // Importa pdfjsLib diretamente
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configuração do worker para o pdfjs-dist
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface VehicleDocumentUploadProps {
     onDataExtracted: (data: ExtractedVehicleData) => void;
     onError: (message: string) => void;
 }
-
-// Helper type guard para verificar se o item é um TextItem (que contém 'str')
-const isTextItem = (item: any): item is { str: string } => {
-    return typeof item === 'object' && item !== null && 'str' in item;
-};
 
 const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExtracted, onError }) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -39,16 +37,13 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
 
                 try {
                     const typedarray = new Uint8Array(e.target.result as ArrayBuffer);
-                    // Usando pdfjsLib importado diretamente
-                    const pdf = await (pdfjsLib as any).getDocument(typedarray).promise;
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
                     let textContent = '';
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const text = await page.getTextContent();
-                        
-                        // Tipagem 'any' explícita para resolver TS7006 (já corrigido anteriormente)
-                        textContent += text.items.map((item: any) => (isTextItem(item) ? item.str : '')).join(' ');
+                        textContent += text.items.map(item => ('str' in item ? item.str : '')).join(' ');
                     }
                     
                     if (!textContent.trim()) {

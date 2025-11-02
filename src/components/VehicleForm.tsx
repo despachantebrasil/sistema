@@ -80,22 +80,15 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         setIsLoading(true);
 
         try {
-            const vehicleDataToSave: Omit<Vehicle, 'id' | 'user_id' | 'created_at'> = {
-                plate: formData.plate,
-                chassis: formData.chassis,
-                renavam: formData.renavam,
-                brand: formData.brand,
-                model: formData.model,
+            const vehicleDataToSave = {
+                ...formData,
                 year_manufacture: Number(formData.year_manufacture),
                 year_model: Number(formData.year_model),
-                color: formData.color,
-                fuel_type: formData.fuel_type,
                 owner_id: Number(formData.owner_id),
-                licensing_expiration_date: formData.licensing_expiration_date,
                 image_urls: imagePreviews.filter(p => !p.startsWith('blob:')),
             };
 
-            await onSave(vehicleDataToSave, imageFiles);
+            await onSave(vehicleDataToSave as Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles);
             
             imagePreviews.forEach((url: string) => {
                 if(url.startsWith('blob:')) URL.revokeObjectURL(url)

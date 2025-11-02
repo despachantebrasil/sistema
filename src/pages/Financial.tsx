@@ -48,6 +48,17 @@ const Financial: React.FC = () => {
         loadTransactions();
     }, [loadTransactions]);
 
+    // Recarrega transações quando um novo serviço é adicionado (via evento customizado)
+    useEffect(() => {
+        const handleTransactionAdded = () => {
+            // Since the service page now calls createTransaction directly, 
+            // we just need to reload the data here.
+            loadTransactions();
+        };
+        window.addEventListener('transactionAdded', handleTransactionAdded as EventListener);
+        return () => window.removeEventListener('transactionAdded', handleTransactionAdded as EventListener);
+    }, [loadTransactions]);
+
     const handleOpenModal = (transaction: Transaction | null = null) => {
         setEditingTransaction(transaction);
         setIsModalOpen(true);

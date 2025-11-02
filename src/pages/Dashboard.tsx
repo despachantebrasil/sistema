@@ -5,6 +5,7 @@ import type { DashboardKpiV2, NotificationItem, Service, Client, Vehicle } from 
 import { ServiceStatus } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, PieLabelRenderProps } from 'recharts';
 import { fetchDashboardKpis, fetchServices, fetchClients, fetchVehicles } from '../services/supabase';
+import { supabase } from '../integrations/supabase/client';
 
 const kpiColors: Record<DashboardKpiV2['color'], { bg: string; text: string; iconBg: string }> = {
   blue: { bg: 'bg-blue-500', text: 'text-blue-100', iconBg: 'bg-blue-600/[.5]' },
@@ -211,9 +212,12 @@ const Dashboard: React.FC = () => {
     const loadDashboardData = useCallback(async () => {
         setLoading(true);
         try {
-            // fetchDashboardKpis não precisa de userId, pois o RLS já filtra
+            const user = await supabase.auth.getUser();
+            if (!user.data.user) return;
+            const userId = user.data.user.id;
+
             const [kpiData, serviceData, clientData, vehicleData] = await Promise.all([
-                fetchDashboardKpis(),
+                fetchDashboardKpis(userId),
                 fetchServices(),
                 fetchClients(),
                 fetchVehicles()
