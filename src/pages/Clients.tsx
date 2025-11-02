@@ -8,7 +8,6 @@ import ClientDetailsModal, { PrintableClientDetails } from '../components/Client
 import { PlusIcon, EditIcon, TrashIcon, MoreVerticalIcon, SearchIcon, LoaderIcon, PrinterIcon } from '../components/Icons';
 import { fetchClients, createClient, updateClient, deleteClient } from '../services/supabase';
 import { printComponent } from '../utils/printUtils';
-import PrintableClientList from '../components/PrintableClientList';
 
 const getStatusBadge = (status: ClientDocStatus) => {
     const statusMap: Record<ClientDocStatus, { text: string; className: string }> = {
@@ -75,10 +74,6 @@ const Clients: React.FC = () => {
         printComponent(PrintableClientDetails, { client });
     };
 
-    const handlePrintList = () => {
-        printComponent(PrintableClientList, { clients: filteredClients });
-    };
-
     const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null) => {
         try {
             if (editingClient) {
@@ -120,10 +115,6 @@ const Clients: React.FC = () => {
                                 className="pl-10 pr-4 py-2 border rounded-lg focus:ring-primary focus:border-primary"
                             />
                         </div>
-                        <button onClick={handlePrintList} className="btn-scale bg-gray-600 hover:bg-gray-700 flex items-center justify-center">
-                            <PrinterIcon className="w-5 h-5 mr-2" />
-                            Imprimir Lista
-                        </button>
                         <button onClick={() => handleOpenFormModal(null)} className="btn-hover flex items-center justify-center">
                             <PlusIcon className="w-5 h-5 mr-2" />
                             Novo Cliente
@@ -182,6 +173,9 @@ const Clients: React.FC = () => {
                                                     <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-xl z-10 hidden group-focus-within:block">
                                                         <a href="#" onClick={(e) => { e.preventDefault(); handleOpenFormModal(client); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                             <EditIcon className="w-4 h-4 mr-2" /> Editar
+                                                        </a>
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handlePrintClient(client); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                            <PrinterIcon className="w-4 h-4 mr-2" /> Imprimir
                                                         </a>
                                                         <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteClient(client.id, client.name); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
                                                             <TrashIcon className="w-4 h-4 mr-2" /> Excluir

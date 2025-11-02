@@ -1,16 +1,17 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import type { Vehicle } from '../types';
 import Modal from './ui/Modal';
-import { PrinterIcon } from './Icons'; // Corrigido o import
+import { PrinterIcon } from './Icons';
 
-// Estendendo o tipo Vehicle para incluir ownerName, que é adicionado em Vehicles.tsx
+// Estendendo o tipo Vehicle para incluir ownerName
 interface VehicleWithDetails extends Vehicle {
-    ownerName?: string;
+    ownerName: string;
 }
 
 interface VehicleDetailsModalProps {
   vehicle: VehicleWithDetails | null;
   onClose: () => void;
+  onPrint: (vehicle: VehicleWithDetails) => void;
 }
 
 interface DetailItemProps {
@@ -25,9 +26,9 @@ const DetailItem: React.FC<DetailItemProps> = ({ label, value }) => (
   </div>
 );
 
-// Componente otimizado para impressão
-const PrintableVehicleDetails: React.FC<{ vehicle: VehicleWithDetails }> = ({ vehicle }) => (
-    <div id="printable-vehicle-content" className="p-6 space-y-6 printable-card">
+// Componente otimizado e agora exportado para impressão
+export const PrintableVehicleDetails: React.FC<{ vehicle: VehicleWithDetails }> = ({ vehicle }) => (
+    <div className="p-6 space-y-6 printable-card">
         <div className="flex justify-between items-start border-b pb-4 mb-4">
             <div className="space-y-1">
                 <h1 className="text-2xl font-bold text-dark-text uppercase">{vehicle.brand} {vehicle.model}</h1>
@@ -74,34 +75,18 @@ const PrintableVehicleDetails: React.FC<{ vehicle: VehicleWithDetails }> = ({ ve
     </div>
 );
 
-
-const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onClose }) => {
-  const printRef = useRef<HTMLDivElement>(null);
-
+const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onClose, onPrint }) => {
   if (!vehicle) return null;
-  
-  const handlePrint = () => {
-    const content = printRef.current;
-    if (content) {
-        const reportContainer = document.getElementById('report-content');
-        if (reportContainer) {
-            reportContainer.innerHTML = '';
-            reportContainer.appendChild(content.cloneNode(true));
-            window.print();
-            reportContainer.innerHTML = '';
-        }
-    }
-  };
 
   return (
     <Modal isOpen={!!vehicle} onClose={onClose} title="Detalhes do Veículo">
-      <div ref={printRef}>
+      <div>
         <PrintableVehicleDetails vehicle={vehicle} />
       </div>
 
       <div className="flex justify-end space-x-3 pt-4 border-t mt-6 no-print">
         <button 
-            onClick={handlePrint} 
+            onClick={() => onPrint(vehicle)} 
             className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
         >
             <PrinterIcon className="w-5 h-5 mr-2" />

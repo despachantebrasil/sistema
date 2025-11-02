@@ -2,13 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
-import VehicleDetailsModal from '../components/VehicleDetailsModal'; 
+import VehicleDetailsModal, { PrintableVehicleDetails } from '../components/VehicleDetailsModal'; 
 import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; 
 import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
-import { PlusIcon, LoaderIcon, EditIcon, PrinterIcon } from '../components/Icons';
+import { PlusIcon, LoaderIcon, EditIcon, TrashIcon, MoreVerticalIcon, PrinterIcon } from '../components/Icons';
 import { fetchVehicles, createVehicle, fetchClients, deleteVehicle } from '../services/supabase';
 import { printComponent } from '../utils/printUtils';
-import PrintableVehicleList from '../components/PrintableVehicleList';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -117,7 +116,6 @@ const Vehicles: React.FC = () => {
     };
 
     const handleDataExtracted = (data: ExtractedVehicleData) => {
-        console.log("Dados recebidos na página:", data);
         setPrefilledData(data);
         setIsFormModalOpen(true);
     };
@@ -127,8 +125,8 @@ const Vehicles: React.FC = () => {
         setPrefilledData(undefined);
     };
 
-    const handlePrintList = () => {
-        printComponent(PrintableVehicleList, { vehicles });
+    const handlePrintVehicle = (vehicle: VehicleWithOwnerName) => {
+        printComponent(PrintableVehicleDetails, { vehicle });
     };
 
     return (
@@ -141,10 +139,6 @@ const Vehicles: React.FC = () => {
                             onDataExtracted={handleDataExtracted}
                             onError={(message) => alert(`Erro: ${message}`)}
                         />
-                        <button onClick={handlePrintList} className="btn-scale bg-gray-600 hover:bg-gray-700 flex items-center justify-center">
-                            <PrinterIcon className="w-5 h-5 mr-2" />
-                            Imprimir Lista
-                        </button>
                         <button 
                             onClick={() => setIsFormModalOpen(true)}
                             className="flex items-center justify-center btn-hover"
@@ -163,7 +157,7 @@ const Vehicles: React.FC = () => {
                                 <th className="p-4 font-semibold">Proprietário</th>
                                 <th className="p-4 font-semibold">RENAVAM</th>
                                 <th className="p-4 font-semibold">Venc. Licenc.</th>
-                                <th className="p-4 font-semibold">Ações</th>
+                                <th className="p-4 font-semibold text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -188,10 +182,24 @@ const Vehicles: React.FC = () => {
                                         <td className="p-4">
                                             <ExpirationDate date={vehicle.licensing_expiration_date} />
                                         </td>
-                                        <td className="p-4 space-x-2">
-                                            <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline">Detalhes</button>
-                                            <button onClick={() => handleDeleteVehicle(vehicle.id, vehicle.plate)} className="text-red-500 hover:underline">Excluir</button>
-                                            <button className="text-gray-500 hover:text-primary p-1"><EditIcon className="w-4 h-4" /></button>
+                                        <td className="p-4 text-center">
+                                            <div className="relative inline-block">
+                                                <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline mr-2">Detalhes</button>
+                                                <button className="p-2 hover:bg-gray-200 rounded-full group">
+                                                    <MoreVerticalIcon className="w-5 h-5 text-gray-600" />
+                                                    <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-xl z-10 hidden group-focus-within:block">
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); /* Lógica de editar aqui */ }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                            <EditIcon className="w-4 h-4 mr-2" /> Editar
+                                                        </a>
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handlePrintVehicle(vehicle); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                            <PrinterIcon className="w-4 h-4 mr-2" /> Imprimir
+                                                        </a>
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteVehicle(vehicle.id, vehicle.plate); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                                            <TrashIcon className="w-4 h-4 mr-2" /> Excluir
+                                                        </a>
+                                                    </div>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -201,7 +209,11 @@ const Vehicles: React.FC = () => {
                 </div>
             </Card>
 
-            <VehicleDetailsModal vehicle={selectedVehicle} onClose={handleCloseDetails} />
+            <VehicleDetailsModal 
+                vehicle={selectedVehicle} 
+                onClose={handleCloseDetails}
+                onPrint={handlePrintVehicle}
+            />
 
             <Modal isOpen={isFormModalOpen} onClose={handleCloseModal} title="Adicionar Novo Veículo">
                 <VehicleForm 
