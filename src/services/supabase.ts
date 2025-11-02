@@ -337,16 +337,88 @@ export const deleteVehicle = async (vehicleId: number): Promise<void> => {
     await logAction('VEHICLE_DELETED', { type: 'vehicle', id: vehicleId });
 };
 
+export const transferVehicle = async (
+    vehicle: Vehicle,
+    newOwnerId: number,
+    price: number,
+    dueDate: string,
+    payerId: number
+): Promise<void> => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) throw new Error("Usuário não autenticado.");
+    const userId = user.data.user.id;
+
+    // 1. Create the transfer service
+    const servicePayload = {
+        user_id: userId,
+        client_id: vehicle.owner_id, // The service is for the original owner
+        vehicle_id: vehicle.id,
+        name: 'Transferência de Propriedade',
+        status: ServiceStatus.TODO,
+        due_date: dueDate,
+        price: price,
+        payer_client_id: payerId,
+    };
+    const { data: newService, error: serviceError } = await supabase
+        .from('services')
+        .insert(servicePayload)
+        .select()
+        .single();
+
+    if (serviceError) throw serviceError;
+
+    // 2. Create the financial transaction
+    const transactionPayload = {
+        user_id: userId,
+        description: `Serviço: Transferência de Propriedade - ${vehicle.plate}`,
+        category: 'Receita de Serviço',
+        transaction_date: new Date().toISOString().split('T')[0],
+        amount: price,
+        type: TransactionType.REVENUE,
+        status: TransactionStatus.PENDING,
+        due_date: dueDate,
+        service_id: newService.id,
+        client_id: payerId, // The transaction is linked to the payer
+    };
+    const { error: transactionError } = await supabase.from('transactions').insert(transactionPayload);
+
+    if (transactionError) {
+        // Rollback service creation if transaction fails? For now, we'll just throw.
+        throw transactionError;
+    }
+
+    // 3. Update the vehicle's owner
+    const { error: vehicleUpdateError } = await supabase
+        .from('vehicles')
+        .update({ owner_id: newOwnerId })
+        .eq('id', vehicle.id);
+
+    if (vehicleUpdateError) throw vehicleUpdateError;
+
+    // 4. Log the action
+    await logAction('VEHICLE_TRANSFERRED', { type: 'vehicle', id: vehicle.id }, {
+        from_owner_id: vehicle.owner_id,
+        to_owner_id: newOwnerId,
+        service_id: newService.id,
+    });
+};
+
+
 // --- Service CRUD Operations ---
 
 export const fetchServices = async (): Promise<Service[]> => {
     const { data, error } = await supabase
         .from('services')
-        .select('*')
+        .select('*, client:clients(name), payer:clients!payer_client_id(name)')
         .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data as Service[];
+    
+    // Manually map payer name to a consistent property
+    return data.map((s: any) => ({
+        ...s,
+        payer_client_name: s.payer?.name
+    })) as Service[];
 };
 
 export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' | 'created_at' | 'status'>): Promise<Service> => {

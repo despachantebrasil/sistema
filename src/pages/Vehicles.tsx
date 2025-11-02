@@ -4,9 +4,10 @@ import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal, { PrintableVehicleDetails } from '../components/VehicleDetailsModal'; 
 import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; 
+import VehicleTransferModal from '../components/VehicleTransferModal'; // Importando o novo modal
 import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
-import { PlusIcon, LoaderIcon, EditIcon, TrashIcon, MoreVerticalIcon, PrinterIcon } from '../components/Icons';
-import { fetchVehicles, createVehicle, fetchClients, deleteVehicle } from '../services/supabase';
+import { PlusIcon, LoaderIcon, EditIcon, TrashIcon, MoreVerticalIcon, PrinterIcon } from '../components/Icons'; // Adicionar ícone de transferência se necessário
+import { fetchVehicles, createVehicle, fetchClients, deleteVehicle, transferVehicle } from '../services/supabase'; // Importando a nova função
 import { printComponent } from '../utils/printUtils';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
@@ -53,6 +54,8 @@ const Vehicles: React.FC = () => {
     const [vehicles, setVehicles] = useState<VehicleWithOwnerName[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+    const [vehicleToTransfer, setVehicleToTransfer] = useState<VehicleWithOwnerName | null>(null);
     const [selectedVehicle, setSelectedVehicle] = useState<VehicleWithOwnerName | null>(null);
     const [loading, setLoading] = useState(true);
     const [prefilledData, setPrefilledData] = useState<ExtractedVehicleData | undefined>(undefined);
@@ -104,6 +107,24 @@ const Vehicles: React.FC = () => {
                 console.error('Erro ao excluir veículo:', error);
                 alert('Não foi possível excluir o veículo.');
             }
+        }
+    };
+
+    const handleOpenTransferModal = (vehicle: VehicleWithOwnerName) => {
+        setVehicleToTransfer(vehicle);
+        setIsTransferModalOpen(true);
+    };
+
+    const handleConfirmTransfer = async (newOwnerId: number, price: number, dueDate: string, payerId: number) => {
+        if (!vehicleToTransfer) return;
+        try {
+            await transferVehicle(vehicleToTransfer, newOwnerId, price, dueDate, payerId);
+            setIsTransferModalOpen(false);
+            setVehicleToTransfer(null);
+            await loadData();
+            alert('Veículo transferido com sucesso!');
+        } catch (error) {
+            throw error;
         }
     };
 
@@ -188,6 +209,10 @@ const Vehicles: React.FC = () => {
                                                 <button className="p-2 hover:bg-gray-200 rounded-full group">
                                                     <MoreVerticalIcon className="w-5 h-5 text-gray-600" />
                                                     <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-xl z-10 hidden group-focus-within:block">
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleOpenTransferModal(vehicle); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                            {/* Ícone de transferência pode ser adicionado aqui */}
+                                                            Transferir
+                                                        </a>
                                                         <a href="#" onClick={(e) => { e.preventDefault(); /* Lógica de editar aqui */ }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                             <EditIcon className="w-4 h-4 mr-2" /> Editar
                                                         </a>
@@ -223,6 +248,17 @@ const Vehicles: React.FC = () => {
                     prefilledData={prefilledData}
                 />
             </Modal>
+
+            {vehicleToTransfer && (
+                <Modal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} title="Transferir Veículo">
+                    <VehicleTransferModal
+                        vehicle={vehicleToTransfer}
+                        clients={clients}
+                        onConfirm={handleConfirmTransfer}
+                        onCancel={() => setIsTransferModalOpen(false)}
+                    />
+                </Modal>
+            )}
         </div>
     );
 };
