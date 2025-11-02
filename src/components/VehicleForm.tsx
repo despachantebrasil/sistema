@@ -178,7 +178,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
             
-            {/* Seção 4: Categoria e Potência/Cilindrada (3 colunas) */}
+            {/* Seção 4: Categoria, Potência/Cilindrada e Vencimento Licenciamento (3 colunas) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoria</label>
