@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { dashboardKpisV2, mockNotifications } from '../data/mockData';
-import { fetchServices, fetchClients } from '../services/dataService';
-import { UsersIcon, FileTextIcon, DollarSignIcon, WarningIcon, LoaderIcon } from '../components/Icons';
-import type { DashboardKpiV2, NotificationItem, Service, Client } from '../types';
+import React from 'react';
+import { dashboardKpisV2, mockNotifications, mockServices } from '../data/mockData';
+import { UsersIcon, FileTextIcon, DollarSignIcon, WarningIcon } from '../components/Icons';
+import type { DashboardKpiV2, NotificationItem, Service } from '../types';
 import { ServiceStatus } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, PieLabelRenderProps } from 'recharts';
 
@@ -32,8 +31,8 @@ const KpiCard: React.FC<{ kpi: DashboardKpiV2 }> = ({ kpi }) => {
         </div>
       </div>
       <p className="text-4xl font-bold mt-2">{kpi.value}</p>
-      <p className="mt-2 text-sm opacity-80">{kpi.subtitle}</p>
-      <p className="mt-1 text-sm opacity-80">{kpi.change}</p>
+      <p className={`mt-2 text-sm ${colorClasses.text}`}>{kpi.subtitle}</p>
+      <p className={`mt-1 text-sm ${colorClasses.text}`}>{kpi.change}</p>
     </div>
   );
 };
@@ -49,48 +48,40 @@ const getStatusDisplay = (status: ServiceStatus) => {
     return statusMap[status] || { text: status, className: 'bg-gray-200 text-gray-800' };
 };
 
-const RecentProcesses: React.FC<{services: Service[], isLoading: boolean}> = ({services, isLoading}) => {
+const RecentProcesses: React.FC<{services: Service[]}> = ({services}) => {
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg h-full">
             <h3 className="text-xl font-bold text-dark-text">Processos Recentes</h3>
             <div className="mt-4 overflow-x-auto">
-                {isLoading ? (
-                    <div className="text-center p-8 text-gray-500">
-                        <LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando processos...
-                    </div>
-                ) : services.length === 0 ? (
-                    <div className="text-center p-8 text-gray-500">Nenhum processo ativo.</div>
-                ) : (
-                    <table className="w-full text-left min-w-[600px]">
-                        <thead>
-                            <tr className="border-b">
-                                <th className="py-3 pr-3 font-semibold text-medium-text">Cliente</th>
-                                <th className="py-3 px-3 font-semibold text-medium-text">Tipo</th>
-                                <th className="py-3 px-3 font-semibold text-medium-text">Veículo</th>
-                                <th className="py-3 px-3 font-semibold text-medium-text">Status</th>
-                                <th className="py-3 pl-3 font-semibold text-medium-text text-right">Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {services.slice(0,5).map((service: Service) => {
-                                const statusDisplay = getStatusDisplay(service.status);
-                                return (
-                                    <tr key={service.id} className="border-b last:border-none">
-                                        <td className="py-4 pr-3 font-medium text-dark-text">{service.clientName}</td>
-                                        <td className="py-4 px-3 text-medium-text">{service.name}</td>
-                                        <td className="py-4 px-3 text-medium-text">{service.vehiclePlate}</td>
-                                        <td className="py-4 px-3">
-                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${statusDisplay.className}`}>
-                                                {statusDisplay.text}
-                                            </span>
-                                        </td>
-                                        <td className="py-4 pl-3 font-semibold text-dark-text text-right">{service.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                )}
+                <table className="w-full text-left min-w-[600px]">
+                    <thead>
+                        <tr className="border-b">
+                            <th className="py-3 pr-3 font-semibold text-medium-text">Cliente</th>
+                            <th className="py-3 px-3 font-semibold text-medium-text">Tipo</th>
+                            <th className="py-3 px-3 font-semibold text-medium-text">Veículo</th>
+                            <th className="py-3 px-3 font-semibold text-medium-text">Status</th>
+                            <th className="py-3 pl-3 font-semibold text-medium-text text-right">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {services.slice(0,5).map((service: Service) => {
+                            const statusDisplay = getStatusDisplay(service.status);
+                            return (
+                                <tr key={service.id} className="border-b last:border-none">
+                                    <td className="py-4 pr-3 font-medium text-dark-text">{service.clientName}</td>
+                                    <td className="py-4 px-3 text-medium-text">{service.name}</td>
+                                    <td className="py-4 px-3 text-medium-text">{service.vehiclePlate}</td>
+                                    <td className="py-4 px-3">
+                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${statusDisplay.className}`}>
+                                            {statusDisplay.text}
+                                        </span>
+                                    </td>
+                                    <td className="py-4 pl-3 font-semibold text-dark-text text-right">{service.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
@@ -118,25 +109,21 @@ const AlertsAndNotifications: React.FC<{ notifications: NotificationItem[] }> = 
     );
 };
 
-const ServicesByClientChart: React.FC<{ services: Service[], isLoading: boolean }> = ({ services, isLoading }) => {
-    const servicesByClient = useMemo(() => {
-        return services.reduce((acc: Record<string, number>, service: Service) => {
-            acc[service.clientName] = (acc[service.clientName] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-    }, [services]);
+const ServicesByClientChart: React.FC = () => {
+    const servicesByClient = mockServices.reduce((acc: Record<string, number>, service: Service) => {
+        acc[service.clientName] = (acc[service.clientName] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
 
-    const chartData = useMemo(() => {
-        return Object.entries(servicesByClient)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 6); // Limit to top 6 clients
-    }, [servicesByClient]);
+    const chartData = Object.entries(servicesByClient)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
 
-    const COLORS = ['#0D47A1', '#7B76B3', '#FFC107', '#00A8E8', '#2EC4B6', '#1A4355'];
+    const COLORS = ['#3C3B6E', '#7B76B3', '#F2E8C9', '#00A8E8', '#2EC4B6', '#1A4355'];
     
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, name }: PieLabelRenderProps) => {
+        // Removed unused 'x' and 'y' variables
         const sin = Math.sin(-(midAngle as number) * RADIAN);
         const cos = Math.cos(-(midAngle as number) * RADIAN);
         const sx = (cx as number) + ((outerRadius as number) + 5) * cos;
@@ -160,100 +147,50 @@ const ServicesByClientChart: React.FC<{ services: Service[], isLoading: boolean 
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg h-[350px]">
             <h3 className="text-xl font-bold text-dark-text mb-4">Serviços por Cliente</h3>
-            {isLoading ? (
-                <div className="text-center p-8 text-gray-500 h-full flex items-center justify-center">
-                    <LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando gráfico...
-                </div>
-            ) : chartData.length === 0 ? (
-                <div className="text-center p-8 text-gray-500 h-full flex items-center justify-center">Nenhum serviço para exibir.</div>
-            ) : (
-                <ResponsiveContainer width="100%" height="90%">
-                    <PieChart>
-                        <Pie
-                            data={chartData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={renderCustomizedLabel}
-                            outerRadius={80}
-                            dataKey="value"
-                            nameKey="name"
-                        >
-                            {chartData.map((_, index: number) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                        </Pie>
-                    </PieChart>
-                </ResponsiveContainer>
-            )}
+            <ResponsiveContainer width="100%" height="90%">
+                <PieChart>
+                    <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomizedLabel}
+                        outerRadius={80}
+                        dataKey="value"
+                        nameKey="name"
+                    >
+                        {chartData.map((_, index: number) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                    </Pie>
+                </PieChart>
+            </ResponsiveContainer>
         </div>
     );
 };
 
 
 const Dashboard: React.FC = () => {
-    const [services, setServices] = useState<Service[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+  return (
+    <div className="p-6 lg:p-8 bg-light-bg min-h-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {dashboardKpisV2.map((kpi: DashboardKpiV2) => (
+          <KpiCard key={kpi.title} kpi={kpi} />
+        ))}
+      </div>
 
-    useEffect(() => {
-        const loadData = async () => {
-            setIsLoading(true);
-            const [serviceData, clientData] = await Promise.all([fetchServices(), fetchClients()]);
-            setServices(serviceData);
-            setClients(clientData);
-            setIsLoading(false);
-        };
-        loadData();
-    }, []);
-
-    // Recalculate KPIs based on real data
-    const activeServices = services.filter(s => s.status === ServiceStatus.IN_PROGRESS || s.status === ServiceStatus.TODO || s.status === ServiceStatus.WAITING_DOCS).length;
-    const activeClients = clients.length;
-    
-    const updatedKpis: DashboardKpiV2[] = useMemo(() => {
-        const kpis = [...dashboardKpisV2]; // Start with mock data
-        
-        // Update Client KPI with real data
-        kpis[0] = { 
-            ...kpis[0], 
-            value: String(activeClients),
-            change: isLoading ? 'Carregando...' : (activeClients > 0 ? 'Dados atualizados' : 'Nenhum cliente'),
-        };
-        
-        // Update Service KPI with real data
-        kpis[1] = { 
-            ...kpis[1], 
-            value: String(activeServices),
-            change: isLoading ? 'Carregando...' : (activeServices > 0 ? 'Dados atualizados' : 'Nenhum processo'),
-        };
-        
-        // Revenue and Alerts KPIs remain static (mocked) for now
-        
-        return kpis;
-    }, [activeClients, activeServices, isLoading]);
-
-
-    return (
-        <div className="p-6 lg:p-8 bg-light-bg min-h-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {updatedKpis.map((kpi: DashboardKpiV2) => (
-                    <KpiCard key={kpi.title} kpi={kpi} />
-                ))}
-            </div>
-
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2">
-                    <RecentProcesses services={services} isLoading={isLoading} />
-                </div>
-                
-                <div className="space-y-8">
-                    <ServicesByClientChart services={services} isLoading={isLoading} />
-                    <AlertsAndNotifications notifications={mockNotifications} />
-                </div>
-            </div>
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-2">
+          <RecentProcesses services={mockServices} />
         </div>
-    );
+        
+        <div className="space-y-8">
+          <ServicesByClientChart />
+          <AlertsAndNotifications notifications={mockNotifications} />
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default Dashboard;

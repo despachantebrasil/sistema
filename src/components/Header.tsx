@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, LogOutIcon, LoaderIcon } from './Icons';
-import { fetchClients, fetchVehicles } from '../services/dataService';
-import type { AlertItem, AlertStatus, Client, Vehicle } from '../types';
-import { useAuth } from './AuthProvider';
+import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, LogOutIcon } from './Icons';
+import { mockClients } from '../data/mockData';
+import { mockVehicles } from '../data/mockData';
+import type { AlertItem, AlertStatus } from '../types';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '../integrations/supabase/client';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -26,31 +28,50 @@ const getAlertStatus = (dateString: string | undefined): AlertStatus => {
 
 interface HeaderProps {
   title: string;
+  session: Session;
   onMenuClick: () => void;
   avatarUrl: string | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvatarUrl }) => {
+const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl: userAvatarUrl }) => {
   const [isAlertsOpen, setIsAlertsOpen] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  
   const alertsRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { userRole, userFullName, logout } = useAuth(); // Usando userFullName real
+
+  const alerts: AlertItem[] = useMemo(() => {
+    const allAlerts: AlertItem[] = [];
+
+    mockClients.forEach(client => {
+      const status = getAlertStatus(client.cnhExpirationDate);
+      if (status !== 'ok') {
+        allAlerts.push({
+          id: `client-${client.id}`,
+          type: 'CNH',
+          message: `CNH de ${client.name}`,
+          date: client.cnhExpirationDate!,
+          status,
+        });
+      }
+    });
+
+    mockVehicles.forEach(vehicle => {
+      const status = getAlertStatus(vehicle.licensingExpirationDate);
+      if (status !== 'ok') {
+        allAlerts.push({
+          id: `vehicle-${vehicle.id}`,
+          type: 'Licenciamento',
+          message: `Licenciamento de ${vehicle.plate}`,
+          date: vehicle.licensingExpirationDate!,
+          status,
+        });
+      }
+    });
+    
+    return allAlerts.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, []);
 
   useEffect(() => {
-    const loadAlertData = async () => {
-        setIsDataLoading(true);
-        const [clientData, vehicleData] = await Promise.all([fetchClients(), fetchVehicles()]);
-        setClients(clientData);
-        setVehicles(vehicleData);
-        setIsDataLoading(false);
-    };
-    loadAlertData();
-
     const handleClickOutside = (event: MouseEvent) => {
       if (alertsRef.current && !alertsRef.current.contains(event.target as Node)) {
         setIsAlertsOpen(false);
@@ -64,39 +85,6 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvat
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  const alerts: AlertItem[] = useMemo(() => {
-    const allAlerts: AlertItem[] = [];
-
-    clients.forEach(client => {
-      const status = getAlertStatus(client.cnhExpirationDate);
-      if (status !== 'ok' && client.cnhExpirationDate) {
-        allAlerts.push({
-          id: `client-${client.id}`,
-          type: 'CNH',
-          message: `CNH de ${client.name}`,
-          date: client.cnhExpirationDate,
-          status,
-        });
-      }
-    });
-
-    vehicles.forEach(vehicle => {
-      const status = getAlertStatus(vehicle.licensingExpirationDate);
-      if (status !== 'ok' && vehicle.licensingExpirationDate) {
-        allAlerts.push({
-          id: `vehicle-${vehicle.id}`,
-          type: 'Licenciamento',
-          message: `Licenciamento de ${vehicle.plate}`,
-          date: vehicle.licensingExpirationDate,
-          status,
-        });
-      }
-    });
-    
-    return allAlerts.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [clients, vehicles]);
-
   
   const getAlertIcon = (type: AlertItem['type']) => {
     const baseClass = "w-5 h-5 mr-3 flex-shrink-0";
@@ -105,13 +93,13 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvat
     return null;
   }
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
-  // Usamos o nome completo real do AuthProvider
-  const fullName = userFullName;
-  const role = userRole; 
+  const user = session.user;
+  const fullName = user?.user_metadata?.full_name || 'Usuário';
+  const role = user?.user_metadata?.role || 'Despachante';
   const avatarUrl = userAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName as string)}&background=0D47A1&color=fff`;
 
   return (
@@ -146,11 +134,7 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, avatarUrl: userAvat
                 <h3 className="font-semibold text-dark-text">Notificações de Vencimento</h3>
               </div>
               <ul className="py-2 max-h-96 overflow-y-auto">
-                {isDataLoading ? (
-                    <li className="px-4 py-3 text-sm text-center text-gray-500">
-                        <LoaderIcon className="w-4 h-4 inline mr-2" /> Carregando alertas...
-                    </li>
-                ) : alerts.length > 0 ? alerts.map((alert: AlertItem) => (
+                {alerts.length > 0 ? alerts.map((alert: AlertItem) => (
                   <li key={alert.id} className="px-4 py-2 hover:bg-gray-50 flex items-start">
                       {getAlertIcon(alert.type)}
                       <div>

@@ -4,7 +4,7 @@ import { ClientType } from '../types';
 import { CameraIcon } from './Icons';
 
 interface ClientFormProps {
-    onSave: (clientData: Omit<Client, 'id' | 'docStatus'>, avatarFile: File | null) => void; // Updated type to include avatarUrl in clientData
+    onSave: (client: Omit<Client, 'id' | 'docStatus'>) => void;
     onCancel: () => void;
     client?: Client; // For editing
 }
@@ -23,8 +23,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         cpfCnpj: client?.cpfCnpj || '',
         tradeName: client?.tradeName || '',
         contactName: client?.contactName || '',
-        // Include existing avatarUrl in formData if editing
-        avatarUrl: client?.avatarUrl || '', 
     });
 
     const [avatarPreview, setAvatarPreview] = useState<string | null>(client?.avatarUrl || null);
@@ -51,8 +49,19 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             return;
         }
 
-        // Pass the full formData (which includes the existing avatarUrl if no new file was selected)
-        onSave({ ...formData, clientType }, avatarFile);
+        const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+
+        let avatarUrl = client?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=random&color=fff`;
+        if (avatarFile) {
+            avatarUrl = await toBase64(avatarFile);
+        }
+
+        onSave({ ...formData, avatarUrl, clientType });
     };
 
     const maritalStatusOptions = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'Outro'];

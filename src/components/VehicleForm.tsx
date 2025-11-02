@@ -3,7 +3,7 @@ import type { Vehicle, Client } from '../types';
 import { CameraIcon, CloseIcon } from './Icons';
 
 interface VehicleFormProps {
-    onSave: (vehicle: Omit<Vehicle, 'id'>, newImageFiles: File[]) => void;
+    onSave: (vehicle: Omit<Vehicle, 'id'>) => void;
     onCancel: () => void;
     clients: Client[];
     vehicle?: Vehicle; // For editing
@@ -21,14 +21,9 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         color: vehicle?.color || '',
         fuelType: vehicle?.fuelType || '',
         ownerId: vehicle?.ownerId || '',
-        licensingExpirationDate: vehicle?.licensingExpirationDate || '',
     });
-    const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.imageUrls || []);
-
-    // Separate existing URLs from new file previews (blob URLs)
-    const existingImageUrls = imagePreviews.filter((p: string) => !p.startsWith('blob:'));
-    const newFilePreviews = imagePreviews.filter((p: string) => p.startsWith('blob:'));
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -38,31 +33,34 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            const filesToAdd = files.slice(0, 4 - imagePreviews.length);
+            const newFiles = files.slice(0, 4 - imageFiles.length);
 
-            if (filesToAdd.length > 0) {
-                setNewImageFiles(prev => [...prev, ...filesToAdd]);
+            if (newFiles.length > 0) {
+                const newImageFiles = [...imageFiles, ...newFiles];
+                setImageFiles(newImageFiles);
 
-                const newPreviews = filesToAdd.map((file: File) => URL.createObjectURL(file));
+                const newPreviews = newFiles.map((file: File) => URL.createObjectURL(file));
                 setImagePreviews(prev => [...prev, ...newPreviews]);
             }
         }
     };
 
     const handleRemoveImage = (index: number) => {
-        const removedPreview = imagePreviews[index];
-        
-        setImagePreviews(prev => prev.filter((_, i) => i !== index));
+        const newImageFiles = [...imageFiles];
+        const newImagePreviews = [...imagePreviews];
 
-        // If the removed image was a new file (blob URL), remove it from newImageFiles array
-        if (removedPreview.startsWith('blob:')) {
-            // Find the corresponding file in newImageFiles based on its index relative to other new files
-            const newFileIndex = index - existingImageUrls.length;
-            if (newFileIndex >= 0 && newFileIndex < newImageFiles.length) {
-                setNewImageFiles(prev => prev.filter((_, i) => i !== newFileIndex));
-                URL.revokeObjectURL(removedPreview);
-            }
+        // If the removed image was a new file, revoke its object URL
+        const removedPreview = newImagePreviews[index];
+        const fileIndex = imagePreviews.findIndex((p: string) => p === removedPreview);
+        if (fileIndex >= (imagePreviews.length - newImageFiles.length)) {
+           URL.revokeObjectURL(removedPreview);
+           newImageFiles.splice(fileIndex - (imagePreviews.length - newImageFiles.length), 1);
         }
+        
+        newImagePreviews.splice(index, 1);
+        
+        setImageFiles(newImageFiles);
+        setImagePreviews(newImagePreviews);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -73,19 +71,28 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             return;
         }
 
-        // Pass the files and the current list of existing URLs to the parent
+        const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = error => reject(error);
+        });
+
+        const newImageUrls = await Promise.all(imageFiles.map((file: File) => toBase64(file)));
+        const existingImageUrls = imagePreviews.filter((p: string) => p.startsWith('http'));
+
         onSave({
             ...formData,
             yearManufacture: Number(formData.yearManufacture),
             yearModel: Number(formData.yearModel),
             ownerId: Number(formData.ownerId),
             ownerName: owner.name,
-            imageUrls: existingImageUrls, // Only pass existing URLs back
-            licensingExpirationDate: formData.licensingExpirationDate || undefined,
-        }, newImageFiles);
+            imageUrls: [...existingImageUrls, ...newImageUrls],
+        });
 
-        // Clean up blob URLs after submission
-        newFilePreviews.forEach((url: string) => URL.revokeObjectURL(url));
+        imagePreviews.forEach((url: string) => {
+            if(url.startsWith('blob:')) URL.revokeObjectURL(url)
+        });
     };
 
     return (
@@ -145,20 +152,13 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
-                    <input type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-                </div>
-                 <div>
-                    <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
-                    <input type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-                </div>
-            </div>
-            
             <div>
-                <label htmlFor="licensingExpirationDate" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
-                <input type="date" name="licensingExpirationDate" id="licensingExpirationDate" value={formData.licensingExpirationDate} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
+                <input type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+            </div>
+             <div>
+                <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
+                <input type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
             </div>
 
             <div>

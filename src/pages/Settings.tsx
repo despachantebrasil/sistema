@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import { initialPermissions, mockCompanyProfile } from '../data/mockData';
 import type { AppUser, Role, PermissionsMap, CompanyProfile, Page } from '../types';
-import { PlusIcon, EditIcon, TrashIcon } from '../components/Icons';
+import { PlusIcon, EditIcon, TrashIcon, CameraIcon } from '../components/Icons';
+import { createUserWithProfile, updateUserWithProfile } from '../services/supabase';
+import { supabase } from '../integrations/supabase/client';
 
 type SettingsTab = 'users' | 'permissions' | 'company';
 
@@ -18,43 +20,193 @@ const pageLabels: Record<Page, string> = {
 };
 
 // --- User Management Components ---
-// NOTE: User management forms are disabled as full CRUD operations on auth.users require service role keys or edge functions, which we are avoiding for simplicity here.
 const UserForm: React.FC<{ 
     onSave: (user: AppUser, isEditing: boolean) => void, 
     onCancel: () => void,
     editingUser?: AppUser | null 
-}> = ({ onCancel }) => {
+}> = ({ onSave, onCancel, editingUser }) => {
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [role, setRole] = useState<Role>('Usuário');
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
+
+    useEffect(() => {
+        if (editingUser) {
+            setFullName(editingUser.fullName);
+            setEmail(editingUser.email);
+            setRole(editingUser.role);
+            setAvatarPreview(editingUser.avatarUrl || null);
+        }
+    }, [editingUser]);
+
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setAvatarFile(file);
+            const previewUrl = URL.createObjectURL(file);
+            setAvatarPreview(previewUrl);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+
+        try {
+            if (editingUser) {
+                const { user, error } = await updateUserWithProfile(
+                    editingUser.id,
+                    { fullName, email, role, avatarUrl: editingUser.avatarUrl },
+                    password || null,
+                    avatarFile
+                );
+                if (error) throw error;
+                if (user) {
+                    onSave(user, true);
+                }
+            } else {
+                const { user, error } = await createUserWithProfile(
+                    email,
+                    password,
+                    { fullName, role },
+                    avatarFile
+                );
+                if (error) throw error;
+                if (user) {
+                    onSave(user, false);
+                }
+            }
+        } catch (err: any) {
+            alert(`Erro ao salvar usuário: ${err.message}`);
+            setIsLoading(false);
+        }
+    };
+
     return (
-        <div className="p-4 text-center">
-            <p className="text-red-500 font-semibold mb-4">Atenção: A gestão de usuários (criação/edição) está desabilitada no modo cliente.</p>
-            <p className="text-sm text-gray-600">Para gerenciar usuários, utilize o Painel de Controle do Supabase.</p>
-            <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
-                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Fechar</button>
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex flex-col items-center space-y-2">
+                <label htmlFor="avatar-upload" className="cursor-pointer">
+                    <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center relative group overflow-hidden border-2 border-gray-300">
+                        {avatarPreview ? (
+                            <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="text-center">
+                                <CameraIcon className="w-8 h-8 text-gray-500 mx-auto" />
+                                <span className="text-xs text-gray-500 mt-1">Foto</span>
+                            </div>
+                        )}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center transition-all">
+                            <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-semibold">Alterar</span>
+                        </div>
+                    </div>
+                </label>
+                <input id="avatar-upload" type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} />
             </div>
-        </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700">Nome Completo</label>
+                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} required className={inputClasses} />
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700">E-mail</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className={inputClasses} />
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700">Senha</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={editingUser ? "Deixe em branco para não alterar" : ""} className={inputClasses} minLength={editingUser ? undefined : 6} />
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700">Perfil de Acesso</label>
+                <select value={role} onChange={e => setRole(e.target.value as Role)} className={`${inputClasses} bg-white`}>
+                    <option>Usuário</option>
+                    <option>Gerente</option>
+                    <option>Administrador</option>
+                </select>
+            </div>
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancelar</button>
+                <button type="submit" className="btn-scale" disabled={isLoading}>{isLoading ? 'Salvando...' : 'Salvar'}</button>
+            </div>
+        </form>
     );
 };
 
 const UsersTab: React.FC = () => {
+    const [users, setUsers] = useState<AppUser[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [loading] = useState(false);
-    
-    // NOTE: Since we removed mockUsers, we display a placeholder message.
-    const users: AppUser[] = [];
+    const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const handleOpenModal = () => {
+    useEffect(() => {
+        const fetchUsers = async () => {
+            setLoading(true);
+            const { data, error } = await supabase.from('user_profiles_view').select('id, full_name, role, email, avatar_url');
+            
+            if (error) {
+                console.error('Error fetching users:', error);
+                alert('Não foi possível carregar os usuários.');
+            } else {
+                const formattedUsers = data.map((profile: any) => ({
+                    id: profile.id,
+                    fullName: profile.full_name,
+                    email: profile.email,
+                    role: profile.role,
+                    avatarUrl: profile.avatar_url,
+                }));
+                setUsers(formattedUsers);
+            }
+            setLoading(false);
+        };
+
+        fetchUsers();
+    }, []);
+
+    const handleOpenModal = (user: AppUser | null) => {
+        setEditingUser(user);
         setIsModalOpen(true);
     };
 
     const handleCloseModal = () => {
+        setEditingUser(null);
         setIsModalOpen(false);
+    };
+
+    const handleSaveUser = (savedUser: AppUser, isEditing: boolean) => {
+        if (isEditing) {
+            setUsers(prev => prev.map(u => u.id === savedUser.id ? savedUser : u));
+        } else {
+            setUsers(prev => [savedUser, ...prev]);
+        }
+        handleCloseModal();
+    };
+
+    const handleDeleteUser = async (userId: string, userName: string) => {
+        if (!window.confirm(`Tem certeza que deseja excluir o usuário "${userName}"? Esta ação não pode ser desfeita.`)) {
+            return;
+        }
+
+        const { error } = await supabase.functions.invoke('delete-user', {
+            body: { user_id: userId },
+        });
+
+        if (error) {
+            console.error('Error deleting user:', error);
+            alert(`Não foi possível excluir o usuário: ${error.message}`);
+        } else {
+            setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+            alert('Usuário excluído com sucesso.');
+        }
     };
 
     return (
         <div>
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                 <h3 className="text-xl font-bold">Gestão de Usuários</h3>
-                <button onClick={handleOpenModal} className="btn-hover flex items-center justify-center">
+                <button onClick={() => handleOpenModal(null)} className="btn-hover flex items-center justify-center">
                     <PlusIcon className="w-5 h-5 mr-2" />
                     Adicionar Usuário
                 </button>
@@ -72,8 +224,6 @@ const UsersTab: React.FC = () => {
                     <tbody>
                         {loading ? (
                             <tr><td colSpan={4} className="text-center p-8">Carregando usuários...</td></tr>
-                        ) : users.length === 0 ? (
-                            <tr><td colSpan={4} className="text-center p-8 text-gray-500">Nenhum usuário encontrado. Use o Painel do Supabase para gerenciar.</td></tr>
                         ) : (
                             users.map(user => (
                                 <tr key={user.id} className="border-b hover:bg-gray-50">
@@ -88,13 +238,14 @@ const UsersTab: React.FC = () => {
                                     <td className="p-4">{user.email}</td>
                                     <td className="p-4">{user.role}</td>
                                     <td className="p-4 space-x-2 flex items-center">
-                                        <button onClick={() => handleOpenModal()} className="text-primary p-1 hover:bg-gray-200 rounded-full">
+                                        <button onClick={() => handleOpenModal(user)} className="text-primary p-1 hover:bg-gray-200 rounded-full">
                                             <EditIcon className="w-4 h-4" />
                                         </button>
                                         <button 
-                                            onClick={() => alert('Exclusão desabilitada no modo cliente.')} 
-                                            className={`p-1 rounded-full text-red-500 hover:bg-gray-200`}
-                                            title={'Excluir usuário'}
+                                            onClick={() => handleDeleteUser(user.id, user.fullName)} 
+                                            className={`p-1 rounded-full ${user.email === 'gilshikam@gmail.com' ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:bg-gray-200'}`}
+                                            disabled={user.email === 'gilshikam@gmail.com'}
+                                            title={user.email === 'gilshikam@gmail.com' ? 'Este administrador não pode ser removido.' : 'Excluir usuário'}
                                         >
                                             <TrashIcon className="w-4 h-4" />
                                         </button>
@@ -105,10 +256,11 @@ const UsersTab: React.FC = () => {
                     </tbody>
                 </table>
             </div>
-            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={"Gerenciar Usuário"}>
+            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingUser ? "Editar Usuário" : "Adicionar Novo Usuário"}>
                 <UserForm 
-                    onSave={() => {}} 
+                    onSave={handleSaveUser} 
                     onCancel={handleCloseModal} 
+                    editingUser={editingUser}
                 />
             </Modal>
         </div>
@@ -230,7 +382,7 @@ const CompanyTab: React.FC = () => {
 
 
 // --- Main Settings Page Component ---
-const Settings: React.FC = () => {
+const Settings: React.FC = () => { // Removed session prop
     const [activeTab, setActiveTab] = useState<SettingsTab>('users');
 
     const TabButton: React.FC<{ tab: SettingsTab, label: string }> = ({ tab, label }) => (

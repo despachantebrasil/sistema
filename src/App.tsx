@@ -1,48 +1,83 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import Login from './pages/Login';
-import { useAuth } from './components/AuthProvider';
-import type { Page } from './types';
+import type { Page, Role } from './types';
+import { supabase } from './integrations/supabase/client';
+import type { Session } from '@supabase/supabase-js';
 
-// Importações de Páginas
-import Dashboard from './pages/Dashboard';
-import Clients from './pages/Clients';
-import Vehicles from './pages/Vehicles';
-import Services from './pages/Services';
-import Financial from './pages/Financial';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
+// Lazy loading dos componentes de páginas
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Clients = lazy(() => import('./pages/Clients'));
+const Vehicles = lazy(() => import('./pages/Vehicles'));
+const Services = lazy(() => import('./pages/Services'));
+const Financial = lazy(() => import('./pages/Financial'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Login = lazy(() => import('./pages/Login'));
 
 const App: React.FC = () => {
-  const { session, isLoading, userRole, userAvatarUrl } = useAuth();
+  const [session, setSession] = useState<Session | null>(null);
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+  const [userRole, setUserRole] = useState<Role>('Usuário');
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-light-bg">
-        <p className="text-xl text-primary">Carregando...</p>
-      </div>
-    );
-  }
+  const fetchUserProfile = async (userId: string) => {
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('role, avatar_url')
+      .eq('id', userId)
+      .single();
 
-  if (!session) {
-    return <Login />;
-  }
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      setUserRole('Usuário');
+      setUserAvatarUrl(null);
+    } else if (profile) {
+      setUserRole(profile.role as Role);
+      setUserAvatarUrl(profile.avatar_url);
+    } else {
+      setUserRole('Usuário');
+      setUserAvatarUrl(null);
+    }
+  };
 
-  const renderPage = (page: Page) => {
-      switch (page) {
-          case 'dashboard': return <Dashboard />;
-          case 'clients': return <Clients />;
-          case 'vehicles': return <Vehicles />;
-          case 'services': return <Services />;
-          case 'financial': return <Financial />;
-          case 'reports': return <Reports />;
-          case 'settings': return <Settings />;
-          default: return <Dashboard />;
+  useEffect(() => {
+    setLoading(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
       }
-  }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  const renderContent = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'clients':
+        return <Clients />;
+      case 'vehicles':
+        return <Vehicles />;
+      case 'services':
+        return <Services />;
+      case 'financial':
+        return <Financial />;
+      case 'reports':
+        return <Reports />;
+      case 'settings':
+        return <Settings />;
+      default:
+        return <Dashboard />;
+    }
+  };
   
   const pageTitles: Record<Page, string> = {
       dashboard: 'Painel Administrativo',
@@ -52,6 +87,18 @@ const App: React.FC = () => {
       financial: 'Financeiro',
       reports: 'Relatórios',
       settings: 'Configurações'
+  }
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Carregando...</div>;
+  }
+
+  if (!session) {
+    return (
+      <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
+        <Login />
+      </Suspense>
+    );
   }
 
   return (
@@ -72,12 +119,13 @@ const App: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden no-print">
         <Header 
           title={pageTitles[currentPage]} 
+          session={session}
           onMenuClick={() => setIsSidebarOpen(true)}
           avatarUrl={userAvatarUrl}
         />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-light-bg">
           <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
-            {renderPage(currentPage)}
+            {renderContent()}
           </Suspense>
         </main>
       </div>
