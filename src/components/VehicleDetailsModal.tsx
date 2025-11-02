@@ -2,8 +2,13 @@ import React from 'react';
 import type { Vehicle } from '../types';
 import Modal from './ui/Modal';
 
+// Estendendo o tipo Vehicle para incluir ownerName, que é adicionado em Vehicles.tsx
+interface VehicleWithDetails extends Vehicle {
+    ownerName?: string;
+}
+
 interface VehicleDetailsModalProps {
-  vehicle: Vehicle | null;
+  vehicle: VehicleWithDetails | null;
   onClose: () => void;
 }
 
@@ -29,10 +34,10 @@ const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onCl
           <DetailItem label="Placa" value={vehicle.plate} />
           <DetailItem label="Marca" value={vehicle.brand} />
           <DetailItem label="Modelo" value={vehicle.model} />
-          <DetailItem label="Ano Fabricação" value={vehicle.yearManufacture} />
-          <DetailItem label="Ano Modelo" value={vehicle.yearModel} />
+          <DetailItem label="Ano Fabricação" value={vehicle.year_manufacture} />
+          <DetailItem label="Ano Modelo" value={vehicle.year_model} />
           <DetailItem label="Cor" value={vehicle.color} />
-          <DetailItem label="Combustível" value={vehicle.fuelType} />
+          <DetailItem label="Combustível" value={vehicle.fuel_type} />
           <DetailItem label="Proprietário" value={vehicle.ownerName} />
           <DetailItem label="Chassi" value={vehicle.chassis} />
           <DetailItem label="RENAVAM" value={vehicle.renavam} />
@@ -40,9 +45,9 @@ const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onCl
 
         <div>
           <h3 className="text-lg font-semibold text-dark-text mb-3">Fotos</h3>
-          {vehicle.imageUrls && vehicle.imageUrls.length > 0 ? (
+          {vehicle.image_urls && vehicle.image_urls.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {vehicle.imageUrls.map((url: string, index: number) => (
+              {vehicle.image_urls.map((url: string, index: number) => (
                 <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="block group">
                     <img 
                         src={url} 

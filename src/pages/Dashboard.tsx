@@ -1,9 +1,11 @@
-import React from 'react';
-import { dashboardKpisV2, mockNotifications, mockServices } from '../data/mockData';
-import { UsersIcon, FileTextIcon, DollarSignIcon, WarningIcon } from '../components/Icons';
-import type { DashboardKpiV2, NotificationItem, Service } from '../types';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { dashboardKpisV2, mockNotifications } from '../data/mockData';
+import { UsersIcon, FileTextIcon, DollarSignIcon, WarningIcon, LoaderIcon } from '../components/Icons';
+import type { DashboardKpiV2, NotificationItem, Service, Client, Vehicle } from '../types';
 import { ServiceStatus } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, PieLabelRenderProps } from 'recharts';
+import { fetchDashboardKpis, fetchServices, fetchClients, fetchVehicles } from '../services/supabase';
+import { supabase } from '../integrations/supabase/client';
 
 const kpiColors: Record<DashboardKpiV2['color'], { bg: string; text: string; iconBg: string }> = {
   blue: { bg: 'bg-blue-500', text: 'text-blue-100', iconBg: 'bg-blue-600/[.5]' },
@@ -18,6 +20,8 @@ const icons: Record<DashboardKpiV2['icon'], React.ReactNode> = {
   DollarSignIcon: <DollarSignIcon className="w-6 h-6 text-white" />,
   WarningIcon: <WarningIcon className="w-6 h-6 text-white" />,
 };
+
+const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const KpiCard: React.FC<{ kpi: DashboardKpiV2 }> = ({ kpi }) => {
   const colorClasses = kpiColors[kpi.color];
@@ -48,7 +52,12 @@ const getStatusDisplay = (status: ServiceStatus) => {
     return statusMap[status] || { text: status, className: 'bg-gray-200 text-gray-800' };
 };
 
-const RecentProcesses: React.FC<{services: Service[]}> = ({services}) => {
+interface RecentProcessesProps {
+    services: (Service & { clientName: string; vehiclePlate: string })[];
+    loading: boolean;
+}
+
+const RecentProcesses: React.FC<RecentProcessesProps> = ({ services, loading }) => {
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg h-full">
             <h3 className="text-xl font-bold text-dark-text">Processos Recentes</h3>
@@ -64,22 +73,28 @@ const RecentProcesses: React.FC<{services: Service[]}> = ({services}) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {services.slice(0,5).map((service: Service) => {
-                            const statusDisplay = getStatusDisplay(service.status);
-                            return (
-                                <tr key={service.id} className="border-b last:border-none">
-                                    <td className="py-4 pr-3 font-medium text-dark-text">{service.clientName}</td>
-                                    <td className="py-4 px-3 text-medium-text">{service.name}</td>
-                                    <td className="py-4 px-3 text-medium-text">{service.vehiclePlate}</td>
-                                    <td className="py-4 px-3">
-                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${statusDisplay.className}`}>
-                                            {statusDisplay.text}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 pl-3 font-semibold text-dark-text text-right">{service.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                                </tr>
-                            );
-                        })}
+                        {loading ? (
+                            <tr><td colSpan={5} className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando processos...</td></tr>
+                        ) : services.length === 0 ? (
+                            <tr><td colSpan={5} className="text-center p-8 text-gray-500">Nenhum serviço ativo.</td></tr>
+                        ) : (
+                            services.slice(0,5).map((service) => {
+                                const statusDisplay = getStatusDisplay(service.status);
+                                return (
+                                    <tr key={service.id} className="border-b last:border-none">
+                                        <td className="py-4 pr-3 font-medium text-dark-text">{service.clientName}</td>
+                                        <td className="py-4 px-3 text-medium-text">{service.name}</td>
+                                        <td className="py-4 px-3 text-medium-text">{service.vehiclePlate}</td>
+                                        <td className="py-4 px-3">
+                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${statusDisplay.className}`}>
+                                                {statusDisplay.text}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 pl-3 font-semibold text-dark-text text-right">{service.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                    </tr>
+                                );
+                            })
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -109,21 +124,29 @@ const AlertsAndNotifications: React.FC<{ notifications: NotificationItem[] }> = 
     );
 };
 
-const ServicesByClientChart: React.FC = () => {
-    const servicesByClient = mockServices.reduce((acc: Record<string, number>, service: Service) => {
-        acc[service.clientName] = (acc[service.clientName] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
+interface ServicesByClientChartProps {
+    services: (Service & { clientName: string })[];
+    loading: boolean;
+}
 
-    const chartData = Object.entries(servicesByClient)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
+const ServicesByClientChart: React.FC<ServicesByClientChartProps> = ({ services, loading }) => {
+    const chartData = useMemo(() => {
+        if (loading) return [];
+        const servicesByClient = services.reduce((acc: Record<string, number>, service: Service & { clientName: string }) => {
+            acc[service.clientName] = (acc[service.clientName] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return Object.entries(servicesByClient)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 6); // Top 6 clients
+    }, [services, loading]);
 
     const COLORS = ['#3C3B6E', '#7B76B3', '#F2E8C9', '#00A8E8', '#2EC4B6', '#1A4355'];
     
     const RADIAN = Math.PI / 180;
-    const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, name }: PieLabelRenderProps) => {
-        // Removed unused 'x' and 'y' variables
+    const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, name, percent }: PieLabelRenderProps) => {
         const sin = Math.sin(-(midAngle as number) * RADIAN);
         const cos = Math.cos(-(midAngle as number) * RADIAN);
         const sx = (cx as number) + ((outerRadius as number) + 5) * cos;
@@ -138,7 +161,7 @@ const ServicesByClientChart: React.FC = () => {
             <g>
                 <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={"#999"} fill="none" />
                 <text x={ex + (cos >= 0 ? 1 : -1) * 4} y={ey} dy={3} textAnchor={textAnchor} fill="#666" fontSize={12}>
-                    {name}
+                    {`${name} (${(percent as number * 100).toFixed(0)}%)`}
                 </text>
             </g>
         );
@@ -147,50 +170,125 @@ const ServicesByClientChart: React.FC = () => {
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg h-[350px]">
             <h3 className="text-xl font-bold text-dark-text mb-4">Serviços por Cliente</h3>
-            <ResponsiveContainer width="100%" height="90%">
-                <PieChart>
-                    <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={renderCustomizedLabel}
-                        outerRadius={80}
-                        dataKey="value"
-                        nameKey="name"
-                    >
-                        {chartData.map((_, index: number) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Pie>
-                </PieChart>
-            </ResponsiveContainer>
+            {loading ? (
+                <div className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando gráfico...</div>
+            ) : chartData.length === 0 ? (
+                <div className="text-center py-16 text-gray-500">Nenhum dado de serviço para exibir.</div>
+            ) : (
+                <ResponsiveContainer width="100%" height="90%">
+                    <PieChart>
+                        <Pie
+                            data={chartData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={renderCustomizedLabel}
+                            outerRadius={80}
+                            dataKey="value"
+                            nameKey="name"
+                        >
+                            {chartData.map((_, index: number) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                        </Pie>
+                    </PieChart>
+                </ResponsiveContainer>
+            )}
         </div>
     );
 };
 
 
 const Dashboard: React.FC = () => {
-  return (
-    <div className="p-6 lg:p-8 bg-light-bg min-h-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {dashboardKpisV2.map((kpi: DashboardKpiV2) => (
-          <KpiCard key={kpi.title} kpi={kpi} />
-        ))}
-      </div>
+    const [kpis, setKpis] = useState(dashboardKpisV2);
+    const [services, setServices] = useState<Service[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [loading, setLoading] = useState(true);
 
-      <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-2">
-          <RecentProcesses services={mockServices} />
+    const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
+    const vehicleMap = useMemo(() => new Map(vehicles.map(v => [v.id, v])), [vehicles]);
+
+    const loadDashboardData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const user = await supabase.auth.getUser();
+            if (!user.data.user) return;
+            const userId = user.data.user.id;
+
+            const [kpiData, serviceData, clientData, vehicleData] = await Promise.all([
+                fetchDashboardKpis(userId),
+                fetchServices(),
+                fetchClients(),
+                fetchVehicles()
+            ]);
+            
+            setServices(serviceData);
+            setClients(clientData);
+            setVehicles(vehicleData);
+
+            // Calculate Alerts (CNH/Licensing expiring soon or expired)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const thirtyDaysFromNow = new Date();
+            thirtyDaysFromNow.setDate(today.getDate() + 30);
+            
+            const cnhAlerts = clientData.filter(c => c.cnh_expiration_date && new Date(c.cnh_expiration_date + 'T00:00:00') <= thirtyDaysFromNow);
+            const licensingAlerts = vehicleData.filter(v => v.licensing_expiration_date && new Date(v.licensing_expiration_date + 'T00:00:00') <= thirtyDaysFromNow);
+            const totalAlerts = cnhAlerts.length + licensingAlerts.length;
+
+            const updatedKpis: DashboardKpiV2[] = [
+                { ...dashboardKpisV2[0], value: String(kpiData.clientCount), subtitle: 'Clientes cadastrados', change: '' },
+                { ...dashboardKpisV2[1], value: String(kpiData.activeServiceCount), subtitle: 'Em andamento', change: '' },
+                { ...dashboardKpisV2[2], value: formatCurrency(kpiData.totalRevenue), subtitle: 'Mês Atual', change: '' },
+                { ...dashboardKpisV2[3], value: String(totalAlerts), subtitle: 'Requerem atenção', change: '' },
+            ];
+            setKpis(updatedKpis);
+
+        } catch (error) {
+            console.error('Erro ao carregar dados do Dashboard:', error);
+            // Fallback to default KPIs
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadDashboardData();
+    }, [loadDashboardData]);
+
+    const recentServicesWithDetails = useMemo(() => {
+        return services.map(service => {
+            const client = clientMap.get(service.client_id || 0);
+            const vehicle = vehicleMap.get(service.vehicle_id || 0);
+            return {
+                ...service,
+                clientName: client?.name || 'Desconhecido',
+                vehiclePlate: vehicle?.plate || 'N/A',
+            };
+        }).filter(s => s.status !== ServiceStatus.COMPLETED && s.status !== ServiceStatus.CANCELED);
+    }, [services, clientMap, vehicleMap]);
+
+    return (
+        <div className="p-6 lg:p-8 bg-light-bg min-h-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {kpis.map((kpi: DashboardKpiV2) => (
+                    <KpiCard key={kpi.title} kpi={kpi} />
+                ))}
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:col-span-2">
+                    <RecentProcesses services={recentServicesWithDetails} loading={loading} />
+                </div>
+                
+                <div className="space-y-8">
+                    <ServicesByClientChart services={recentServicesWithDetails} loading={loading} />
+                    <AlertsAndNotifications notifications={mockNotifications} />
+                </div>
+            </div>
         </div>
-        
-        <div className="space-y-8">
-          <ServicesByClientChart />
-          <AlertsAndNotifications notifications={mockNotifications} />
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Dashboard;

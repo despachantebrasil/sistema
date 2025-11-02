@@ -19,48 +19,53 @@ export enum ClientType {
 
 export interface Client {
   id: number;
+  user_id: string; // Chave estrangeira para auth.users
   name: string;
-  cpfCnpj: string;
+  cpf_cnpj: string; // Alterado para snake_case para corresponder ao DB
   email: string;
   phone: string;
   address: string;
-  avatarUrl: string;
-  docStatus: ClientDocStatus;
-  clientType: ClientType;
-  maritalStatus?: string;
+  avatar_url: string; // Alterado para snake_case
+  doc_status: ClientDocStatus; // Alterado para snake_case
+  client_type: ClientType; // Alterado para snake_case
+  marital_status?: string; // Alterado para snake_case
   profession?: string;
   nationality?: string;
   naturalness?: string;
-  cnhExpirationDate?: string; // YYYY-MM-DD
-  tradeName?: string; // Nome Fantasia for Pessoa Jurídica
-  contactName?: string; // Nome do Contato for Pessoa Jurídica
+  cnh_expiration_date?: string; // YYYY-MM-DD, Alterado para snake_case
+  trade_name?: string; // Nome Fantasia for Pessoa Jurídica, Alterado para snake_case
+  contact_name?: string; // Nome do Contato for Pessoa Jurídica, Alterado para snake_case
+  created_at: string;
 }
 
 export interface Vehicle {
   id: number;
+  user_id: string; // Chave estrangeira para auth.users
+  owner_id: number; // ID do cliente (Client.id)
   plate: string;
   chassis: string;
   renavam: string;
   brand: string;
   model: string;
-  yearManufacture: number;
-  yearModel: number;
+  year_manufacture: number; // Alterado para snake_case
+  year_model: number; // Alterado para snake_case
   color: string;
-  fuelType?: string;
-  ownerId: number;
-  ownerName: string;
-  licensingExpirationDate?: string; // YYYY-MM-DD
-  imageUrls?: string[];
+  fuel_type?: string; // Alterado para snake_case
+  licensing_expiration_date?: string; // YYYY-MM-DD, Alterado para snake_case
+  image_urls?: string[]; // Alterado para snake_case
+  created_at: string;
 }
 
 export interface Service {
   id: number;
+  user_id: string; // Chave estrangeira para auth.users
+  client_id?: number; // ID do cliente
+  vehicle_id?: number; // ID do veículo
   name: string;
-  clientName: string;
-  vehiclePlate: string;
   status: ServiceStatus;
-  dueDate: string; // YYYY-MM-DD
+  due_date: string; // YYYY-MM-DD, Alterado para snake_case
   price: number;
+  created_at: string;
 }
 
 export interface ServiceCategory {
@@ -88,15 +93,17 @@ export enum TransactionStatus {
 
 export interface Transaction {
   id: number;
+  user_id: string; // Chave estrangeira para auth.users
   description: string;
   category: string;
-  date: string; // YYYY-MM-DD
+  transaction_date: string; // YYYY-MM-DD, Alterado para snake_case
   amount: number;
   type: TransactionType;
   status: TransactionStatus;
-  dueDate?: string; // YYYY-MM-DD
-  clientId?: number;
-  serviceId?: number;
+  due_date?: string; // YYYY-MM-DD, Alterado para snake_case
+  client_id?: number; // Alterado para snake_case
+  service_id?: number; // Alterado para snake_case
+  created_at: string;
 }
 
 export interface FinancialKpis {

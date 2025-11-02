@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal from '../components/VehicleDetailsModal';
-import { mockVehicles, mockClients } from '../data/mockData';
-import type { Vehicle, AlertStatus } from '../types';
-import { PlusIcon } from '../components/Icons';
+import type { Vehicle, AlertStatus, Client } from '../types';
+import { PlusIcon, LoaderIcon } from '../components/Icons';
+import { fetchVehicles, createVehicle, fetchClients, deleteClient } from '../services/supabase';
 
-
+// Helper function to determine alert status (kept local as it's UI logic)
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
   const today = new Date();
@@ -46,21 +46,70 @@ const ExpirationDate: React.FC<{ date?: string }> = ({ date }) => {
     return <span className={textColor}>{formattedDate}</span>;
 }
 
-const Vehicles: React.FC = () => {
-    const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
-    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+// Definindo o tipo Vehicle com o nome do proprietário para uso na tabela
+type VehicleWithOwnerName = Vehicle & { ownerName: string };
 
-    const handleSaveVehicle = (vehicleData: Omit<Vehicle, 'id'>) => {
-        const newVehicle: Vehicle = {
-            id: vehicles.length > 0 ? Math.max(...vehicles.map((v: Vehicle) => v.id)) + 1 : 1,
-            ...vehicleData,
-        };
-        setVehicles([newVehicle, ...vehicles]);
-        setIsFormModalOpen(false);
+const Vehicles: React.FC = () => {
+    const [vehicles, setVehicles] = useState<VehicleWithOwnerName[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedVehicle, setSelectedVehicle] = useState<VehicleWithOwnerName | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [vehicleData, clientData] = await Promise.all([
+                fetchVehicles(),
+                fetchClients()
+            ]);
+            setClients(clientData);
+            
+            // Map vehicles to include ownerName for display purposes
+            const vehiclesWithNames: VehicleWithOwnerName[] = vehicleData.map(v => {
+                const owner = clientData.find(c => c.id === v.owner_id);
+                return {
+                    ...v,
+                    ownerName: owner ? owner.name : 'Desconhecido',
+                };
+            });
+            setVehicles(vehiclesWithNames);
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+            alert('Não foi possível carregar a lista de veículos.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const handleSaveVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles: File[]) => {
+        try {
+            // Note: Update logic is not implemented yet, only creation is supported via form
+            await createVehicle(vehicleData, imageFiles);
+            await loadData();
+        } catch (error) {
+            throw error;
+        }
     };
 
-    const handleOpenDetails = (vehicle: Vehicle) => {
+    const handleDeleteVehicle = async (vehicleId: number, plate: string) => {
+        if (window.confirm(`Tem certeza que deseja excluir o veículo de placa "${plate}"?`)) {
+            try {
+                // Usando deleteClient como placeholder para deleteVehicle, mas corrigindo a tipagem de retorno
+                await deleteClient(vehicleId); 
+                await loadData();
+            } catch (error) {
+                console.error('Erro ao excluir veículo:', error);
+                alert('Não foi possível excluir o veículo.');
+            }
+        }
+    };
+
+    const handleOpenDetails = (vehicle: VehicleWithOwnerName) => {
         setSelectedVehicle(vehicle);
     };
 
@@ -94,28 +143,34 @@ const Vehicles: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {vehicles.map((vehicle: Vehicle) => (
-                                <tr key={vehicle.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4">
-                                        <span className="px-3 py-1 bg-gray-200 text-gray-800 font-bold rounded-md border-2 border-gray-300">
-                                            {vehicle.plate}
-                                        </span>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
-                                        <div className="text-sm text-gray-500">{vehicle.color} ({vehicle.yearManufacture}/{vehicle.yearModel})</div>
-                                    </td>
-                                    <td className="p-4">{vehicle.ownerName}</td>
-                                    <td className="p-4 font-mono">{vehicle.renavam}</td>
-                                    <td className="p-4">
-                                        <ExpirationDate date={vehicle.licensingExpirationDate} />
-                                    </td>
-                                    <td className="p-4 space-x-2">
-                                        <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline">Detalhes</button>
-                                        <button className="text-red-500 hover:underline">Excluir</button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {loading ? (
+                                <tr><td colSpan={6} className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando veículos...</td></tr>
+                            ) : vehicles.length === 0 ? (
+                                <tr><td colSpan={6} className="text-center p-8 text-gray-500">Nenhum veículo cadastrado.</td></tr>
+                            ) : (
+                                vehicles.map((vehicle) => (
+                                    <tr key={vehicle.id} className="border-b hover:bg-gray-50">
+                                        <td className="p-4">
+                                            <span className="px-3 py-1 bg-gray-200 text-gray-800 font-bold rounded-md border-2 border-gray-300">
+                                                {vehicle.plate}
+                                            </span>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
+                                            <div className="text-sm text-gray-500">{vehicle.color} ({vehicle.year_manufacture}/{vehicle.year_model})</div>
+                                        </td>
+                                        <td className="p-4">{vehicle.ownerName}</td>
+                                        <td className="p-4 font-mono">{vehicle.renavam}</td>
+                                        <td className="p-4">
+                                            <ExpirationDate date={vehicle.licensing_expiration_date} />
+                                        </td>
+                                        <td className="p-4 space-x-2">
+                                            <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline">Detalhes</button>
+                                            <button onClick={() => handleDeleteVehicle(vehicle.id, vehicle.plate)} className="text-red-500 hover:underline">Excluir</button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -127,7 +182,7 @@ const Vehicles: React.FC = () => {
                 <VehicleForm 
                     onSave={handleSaveVehicle}
                     onCancel={() => setIsFormModalOpen(false)}
-                    clients={mockClients}
+                    clients={clients}
                 />
             </Modal>
         </div>

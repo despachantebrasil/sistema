@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Vehicle, Client } from '../types';
 import { CameraIcon, CloseIcon } from './Icons';
 
 interface VehicleFormProps {
-    onSave: (vehicle: Omit<Vehicle, 'id'>) => void;
+    onSave: (vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles: File[]) => Promise<void>;
     onCancel: () => void;
     clients: Client[];
     vehicle?: Vehicle; // For editing
@@ -16,14 +16,22 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         renavam: vehicle?.renavam || '',
         brand: vehicle?.brand || '',
         model: vehicle?.model || '',
-        yearManufacture: vehicle?.yearManufacture || new Date().getFullYear(),
-        yearModel: vehicle?.yearModel || new Date().getFullYear(),
+        year_manufacture: vehicle?.year_manufacture || new Date().getFullYear(),
+        year_model: vehicle?.year_model || new Date().getFullYear(),
         color: vehicle?.color || '',
-        fuelType: vehicle?.fuelType || '',
-        ownerId: vehicle?.ownerId || '',
+        fuel_type: vehicle?.fuel_type || '',
+        owner_id: vehicle?.owner_id || '',
+        licensing_expiration_date: vehicle?.licensing_expiration_date || '',
     });
     const [imageFiles, setImageFiles] = useState<File[]>([]);
-    const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.imageUrls || []);
+    const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.image_urls || []);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (vehicle) {
+            setImagePreviews(vehicle.image_urls || []);
+        }
+    }, [vehicle]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -33,11 +41,10 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            const newFiles = files.slice(0, 4 - imageFiles.length);
+            const newFiles = files.slice(0, 4 - imagePreviews.length);
 
             if (newFiles.length > 0) {
-                const newImageFiles = [...imageFiles, ...newFiles];
-                setImageFiles(newImageFiles);
+                setImageFiles(prev => [...prev, ...newFiles]);
 
                 const newPreviews = newFiles.map((file: File) => URL.createObjectURL(file));
                 setImagePreviews(prev => [...prev, ...newPreviews]);
@@ -46,53 +53,55 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
     };
 
     const handleRemoveImage = (index: number) => {
-        const newImageFiles = [...imageFiles];
         const newImagePreviews = [...imagePreviews];
-
-        // If the removed image was a new file, revoke its object URL
         const removedPreview = newImagePreviews[index];
-        const fileIndex = imagePreviews.findIndex((p: string) => p === removedPreview);
-        if (fileIndex >= (imagePreviews.length - newImageFiles.length)) {
-           URL.revokeObjectURL(removedPreview);
-           newImageFiles.splice(fileIndex - (imagePreviews.length - newImageFiles.length), 1);
-        }
-        
         newImagePreviews.splice(index, 1);
-        
-        setImageFiles(newImageFiles);
         setImagePreviews(newImagePreviews);
+
+        // If the removed image was a new file (blob URL), remove it from imageFiles
+        if (removedPreview.startsWith('blob:')) {
+            const fileIndex = imageFiles.findIndex(file => URL.createObjectURL(file) === removedPreview);
+            if (fileIndex !== -1) {
+                const newImageFiles = [...imageFiles];
+                newImageFiles.splice(fileIndex, 1);
+                setImageFiles(newImageFiles);
+            }
+            URL.revokeObjectURL(removedPreview);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const owner = clients.find((c: Client) => c.id === Number(formData.ownerId));
-        if (!owner) {
+        if (!formData.owner_id) {
             alert('Por favor, selecione um proprietário válido.');
             return;
         }
+        
+        setIsLoading(true);
 
-        const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
+        try {
+            const vehicleDataToSave = {
+                ...formData,
+                year_manufacture: Number(formData.year_manufacture),
+                year_model: Number(formData.year_model),
+                owner_id: Number(formData.owner_id),
+                image_urls: imagePreviews.filter(p => !p.startsWith('blob:')), // Keep only existing URLs
+            };
 
-        const newImageUrls = await Promise.all(imageFiles.map((file: File) => toBase64(file)));
-        const existingImageUrls = imagePreviews.filter((p: string) => p.startsWith('http'));
-
-        onSave({
-            ...formData,
-            yearManufacture: Number(formData.yearManufacture),
-            yearModel: Number(formData.yearModel),
-            ownerId: Number(formData.ownerId),
-            ownerName: owner.name,
-            imageUrls: [...existingImageUrls, ...newImageUrls],
-        });
-
-        imagePreviews.forEach((url: string) => {
-            if(url.startsWith('blob:')) URL.revokeObjectURL(url)
-        });
+            await onSave(vehicleDataToSave as Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles);
+            
+            // Clean up temporary URLs
+            imagePreviews.forEach((url: string) => {
+                if(url.startsWith('blob:')) URL.revokeObjectURL(url)
+            });
+            
+            onCancel();
+        } catch (error) {
+            console.error("Erro ao salvar veículo:", error);
+            alert('Erro ao salvar veículo. Verifique o console para mais detalhes.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -103,8 +112,8 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                     <input type="text" name="plate" id="plate" value={formData.plate} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="ownerId" className="block text-sm font-medium text-gray-700">Proprietário</label>
-                    <select id="ownerId" name="ownerId" value={formData.ownerId} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                    <label htmlFor="owner_id" className="block text-sm font-medium text-gray-700">Proprietário</label>
+                    <select id="owner_id" name="owner_id" value={formData.owner_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                         <option value="" disabled>Selecione um cliente</option>
                         {clients.map((client: Client) => (
                             <option key={client.id} value={client.id}>{client.name}</option>
@@ -126,20 +135,20 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div>
-                    <label htmlFor="yearManufacture" className="block text-sm font-medium text-gray-700">Ano Fabricação</label>
-                    <input type="number" name="yearManufacture" id="yearManufacture" value={formData.yearManufacture} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <label htmlFor="year_manufacture" className="block text-sm font-medium text-gray-700">Ano Fabricação</label>
+                    <input type="number" name="year_manufacture" id="year_manufacture" value={formData.year_manufacture} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="yearModel" className="block text-sm font-medium text-gray-700">Ano Modelo</label>
-                    <input type="number" name="yearModel" id="yearModel" value={formData.yearModel} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <label htmlFor="year_model" className="block text-sm font-medium text-gray-700">Ano Modelo</label>
+                    <input type="number" name="year_model" id="year_model" value={formData.year_model} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
                     <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor</label>
                     <input type="text" name="color" id="color" value={formData.color} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="fuelType" className="block text-sm font-medium text-gray-700">Combustível</label>
-                    <select id="fuelType" name="fuelType" value={formData.fuelType} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                    <label htmlFor="fuel_type" className="block text-sm font-medium text-gray-700">Combustível</label>
+                    <select id="fuel_type" name="fuel_type" value={formData.fuel_type} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                         <option value="">Selecione...</option>
                         <option value="Gasolina">Gasolina</option>
                         <option value="Álcool">Álcool</option>
@@ -159,6 +168,10 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
              <div>
                 <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
                 <input type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+            </div>
+            <div>
+                <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
+                <input type="date" name="licensing_expiration_date" id="licensing_expiration_date" value={formData.licensing_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
             </div>
 
             <div>
@@ -194,11 +207,11 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             </div>
 
             <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
-                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300" disabled={isLoading}>
                     Cancelar
                 </button>
-                <button type="submit" className="btn-scale">
-                    Salvar Veículo
+                <button type="submit" className="btn-scale" disabled={isLoading}>
+                    {isLoading ? 'Salvando...' : 'Salvar Veículo'}
                 </button>
             </div>
         </form>

@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
-import { mockServices, mockClients } from '../data/mockData';
-import type { Service } from '../types';
+import { fetchServices, fetchClients } from '../services/supabase';
+import type { Service, Client } from '../types';
 import { ServiceStatus } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LoaderIcon } from '../components/Icons'; // Corrigido o import
 
 interface ReportFilters {
     startDate: string;
@@ -11,6 +12,9 @@ interface ReportFilters {
     status: 'all' | ServiceStatus;
     clientId: 'all' | number;
 }
+
+// Definindo o tipo de serviço com detalhes do cliente/veículo para o relatório
+type ServiceReportItem = Service & { clientName: string; vehiclePlate: string };
 
 const ReportKpiCard: React.FC<{ title: string; value: string; }> = ({ title, value }) => (
     <div className="bg-white p-4 rounded-lg shadow-sm border">
@@ -22,56 +26,97 @@ const ReportKpiCard: React.FC<{ title: string; value: string; }> = ({ title, val
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const Reports: React.FC = () => {
+    const [allServices, setAllServices] = useState<Service[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [loadingData, setLoadingData] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
+    
     const [filters, setFilters] = useState<ReportFilters>({
         startDate: '',
         endDate: new Date().toISOString().split('T')[0],
         status: 'all',
         clientId: 'all',
     });
-    const [reportData, setReportData] = useState<Service[] | null>(null);
+    const [reportData, setReportData] = useState<ServiceReportItem[] | null>(null);
+
+    const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
+
+    const loadInitialData = useCallback(async () => {
+        setLoadingData(true);
+        try {
+            const [serviceData, clientData] = await Promise.all([
+                fetchServices(),
+                fetchClients()
+            ]);
+            setAllServices(serviceData);
+            setClients(clientData);
+        } catch (error) {
+            console.error('Erro ao carregar dados iniciais para relatórios:', error);
+            alert('Não foi possível carregar os dados de base.');
+        } finally {
+            setLoadingData(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadInitialData();
+    }, [loadInitialData]);
 
     const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
+        setFilters(prev => ({ ...prev, [name]: name === 'clientId' ? (value === 'all' ? 'all' : Number(value)) : value }));
     };
     
     const handleGenerateReport = () => {
-        let filteredServices = mockServices;
+        setIsGenerating(true);
+        let filteredServices = allServices;
 
         if (filters.startDate) {
-            filteredServices = filteredServices.filter(s => new Date(s.dueDate) >= new Date(filters.startDate));
+            filteredServices = filteredServices.filter(s => new Date(s.due_date) >= new Date(filters.startDate));
         }
         if (filters.endDate) {
-            filteredServices = filteredServices.filter(s => new Date(s.dueDate) <= new Date(filters.endDate + 'T23:59:59'));
+            filteredServices = filteredServices.filter(s => new Date(s.due_date) <= new Date(filters.endDate + 'T23:59:59'));
         }
         if (filters.status !== 'all') {
             filteredServices = filteredServices.filter(s => s.status === filters.status);
         }
         if (filters.clientId !== 'all') {
-            const client = mockClients.find(c => c.id === Number(filters.clientId));
-            if (client) {
-                filteredServices = filteredServices.filter(s => s.clientName === client.name);
-            }
+            filteredServices = filteredServices.filter(s => s.client_id === filters.clientId);
         }
-        setReportData(filteredServices);
+        
+        // Add client name and vehicle plate for display
+        const finalReportData: ServiceReportItem[] = filteredServices.map(s => ({
+            ...s,
+            clientName: clientMap.get(s.client_id || 0)?.name || 'Desconhecido',
+            vehiclePlate: 'N/A' // Vehicle data not fetched here for simplicity
+        }));
+
+        setReportData(finalReportData);
+        setIsGenerating(false);
     };
     
     const reportSummary = useMemo(() => {
         if (!reportData) return { totalServices: 0, totalRevenue: 0, averageTicket: 0 };
-        const totalRevenue = reportData.reduce((sum, service) => sum + service.price, 0);
+        const completedRevenue = reportData
+            .filter(s => s.status === ServiceStatus.COMPLETED)
+            .reduce((sum, service) => sum + service.price, 0);
+            
         const totalServices = reportData.length;
-        const averageTicket = totalServices > 0 ? totalRevenue / totalServices : 0;
-        return { totalServices, totalRevenue, averageTicket };
+        const averageTicket = totalServices > 0 ? completedRevenue / totalServices : 0;
+        return { totalServices, totalRevenue: completedRevenue, averageTicket };
     }, [reportData]);
     
     const chartData = useMemo(() => {
         if (!reportData) return [];
          const monthlyData = reportData.reduce((acc, s) => {
-            const month = new Date(s.dueDate).toLocaleString('pt-BR', { year: '2-digit', month: 'short' });
+            const date = new Date(s.due_date);
+            const month = date.toLocaleString('pt-BR', { year: '2-digit', month: 'short' });
             if (!acc[month]) acc[month] = { name: month, Serviços: 0 };
             acc[month].Serviços += 1;
             return acc;
         }, {} as Record<string, { name: string; Serviços: number }>);
+        
+        // Simple sorting by month name (not perfect for year changes, but functional)
         return Object.values(monthlyData).sort((a: { name: string }, b: { name: string }) => {
             const [m1, y1] = a.name.split('/');
             const [m2, y2] = b.name.split('/');
@@ -87,34 +132,42 @@ const Reports: React.FC = () => {
         <div className="p-4 md:p-8 space-y-8">
             <Card className="no-print">
                 <h2 className="text-xl font-bold mb-4">Gerador de Relatórios de Serviços</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                    <div>
-                        <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Data de Início</label>
-                        <input type="date" name="startDate" id="startDate" value={filters.startDate} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-                    </div>
-                    <div>
-                        <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">Data de Fim</label>
-                        <input type="date" name="endDate" id="endDate" value={filters.endDate} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-                    </div>
-                    <div>
-                        <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
-                        <select name="status" id="status" value={filters.status} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
-                            <option value="all">Todos</option>
-                            {Object.values(ServiceStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                    </div>
-                     <div>
-                        <label htmlFor="clientId" className="block text-sm font-medium text-gray-700">Cliente</label>
-                        <select name="clientId" id="clientId" value={filters.clientId} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
-                            <option value="all">Todos</option>
-                            {mockClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                    </div>
-                </div>
-                 <div className="flex justify-end space-x-3 mt-6">
-                    <button onClick={handleGenerateReport} className="btn-hover">Gerar Relatório</button>
-                    {reportData && <button onClick={handlePrint} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Imprimir</button>}
-                </div>
+                {loadingData ? (
+                    <div className="text-center p-4"><LoaderIcon className="w-5 h-5 inline mr-2" /> Carregando dados de filtro...</div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Data de Início</label>
+                                <input type="date" name="startDate" id="startDate" value={filters.startDate} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                            </div>
+                            <div>
+                                <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">Data de Fim</label>
+                                <input type="date" name="endDate" id="endDate" value={filters.endDate} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                            </div>
+                            <div>
+                                <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
+                                <select name="status" id="status" value={filters.status} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                                    <option value="all">Todos</option>
+                                    {Object.values(ServiceStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label htmlFor="clientId" className="block text-sm font-medium text-gray-700">Cliente</label>
+                                <select name="clientId" id="clientId" value={filters.clientId} onChange={handleFilterChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                                    <option value="all">Todos</option>
+                                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end space-x-3 mt-6">
+                            <button onClick={handleGenerateReport} className="btn-hover" disabled={isGenerating}>
+                                {isGenerating ? 'Gerando...' : 'Gerar Relatório'}
+                            </button>
+                            {reportData && <button onClick={handlePrint} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Imprimir</button>}
+                        </div>
+                    </>
+                )}
             </Card>
 
             {reportData ? (
@@ -127,7 +180,7 @@ const Reports: React.FC = () => {
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                             <ReportKpiCard title="Total de Serviços" value={String(reportSummary.totalServices)} />
-                            <ReportKpiCard title="Faturamento Total" value={formatCurrency(reportSummary.totalRevenue)} />
+                            <ReportKpiCard title="Faturamento (Concluído)" value={formatCurrency(reportSummary.totalRevenue)} />
                             <ReportKpiCard title="Ticket Médio" value={formatCurrency(reportSummary.averageTicket)} />
                         </div>
                         
@@ -167,7 +220,7 @@ const Reports: React.FC = () => {
                                                 <td className="p-3">{service.clientName}</td>
                                                 <td className="p-3">{service.vehiclePlate}</td>
                                                 <td className="p-3">{service.status}</td>
-                                                <td className="p-3">{new Date(service.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                                <td className="p-3">{new Date(service.due_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                                                 <td className="p-3">{formatCurrency(service.price)}</td>
                                             </tr>
                                         ))}

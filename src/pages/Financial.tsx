@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import TransactionForm from '../components/TransactionForm';
-import { financialKpis, mockTransactions } from '../data/mockData';
 import type { Transaction } from '../types';
 import { TransactionType, TransactionStatus } from '../types';
-import { PlusIcon, DollarSignIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, EditIcon, TrashIcon } from '../components/Icons';
+import { PlusIcon, DollarSignIcon, ArrowUpCircleIcon, ArrowDownCircleIcon, EditIcon, TrashIcon, LoaderIcon } from '../components/Icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { fetchTransactions, createTransaction, updateTransaction, deleteTransaction } from '../services/supabase';
 
 const KpiCard: React.FC<{ title: string; value: string; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
     <Card className="flex items-center">
@@ -25,22 +25,39 @@ const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style:
 type FinancialTab = 'overview' | 'receivables' | 'payables' | 'all';
 
 const Financial: React.FC = () => {
-    const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [activeTab, setActiveTab] = useState<FinancialTab>('overview');
+    const [loading, setLoading] = useState(true);
+
+    const loadTransactions = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await fetchTransactions();
+            setTransactions(data);
+        } catch (error) {
+            console.error('Erro ao carregar transações:', error);
+            alert('Não foi possível carregar a lista de transações.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const handleTransactionAdded = (event: CustomEvent<Omit<Transaction, 'id'>>) => {
-            const newTransaction = {
-                id: Date.now(),
-                ...event.detail
-            };
-            setTransactions(prev => [newTransaction, ...prev]);
+        loadTransactions();
+    }, [loadTransactions]);
+
+    // Recarrega transações quando um novo serviço é adicionado (via evento customizado)
+    useEffect(() => {
+        const handleTransactionAdded = () => {
+            // Since the service page now calls createTransaction directly, 
+            // we just need to reload the data here.
+            loadTransactions();
         };
         window.addEventListener('transactionAdded', handleTransactionAdded as EventListener);
         return () => window.removeEventListener('transactionAdded', handleTransactionAdded as EventListener);
-    }, []);
+    }, [loadTransactions]);
 
     const handleOpenModal = (transaction: Transaction | null = null) => {
         setEditingTransaction(transaction);
@@ -52,21 +69,53 @@ const Financial: React.FC = () => {
         setEditingTransaction(null);
     };
 
-    const handleSaveTransaction = (data: Omit<Transaction, 'id'>) => {
-        if (editingTransaction) {
-            setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? { id: t.id, ...data } : t));
-        } else {
-            setTransactions(prev => [{ id: Date.now(), ...data }, ...prev]);
+    const handleSaveTransaction = async (data: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => {
+        try {
+            if (editingTransaction) {
+                await updateTransaction(editingTransaction.id, data);
+            } else {
+                await createTransaction(data);
+            }
+            await loadTransactions();
+        } catch (error) {
+            throw error;
         }
-        handleCloseModal();
     };
 
-    const handleDeleteTransaction = (id: number) => {
+    const handleDeleteTransaction = async (id: number) => {
         if (window.confirm('Tem certeza de que deseja excluir esta transação?')) {
-            setTransactions(prev => prev.filter(t => t.id !== id));
+            try {
+                await deleteTransaction(id);
+                await loadTransactions();
+            } catch (error) {
+                console.error('Erro ao excluir transação:', error);
+                alert('Não foi possível excluir a transação.');
+            }
         }
     };
     
+    const financialSummary = useMemo(() => {
+        const totalRevenue = transactions
+            .filter(t => t.type === TransactionType.REVENUE && t.status === TransactionStatus.PAID)
+            .reduce((sum, t) => sum + t.amount, 0);
+        
+        const accountsReceivable = transactions
+            .filter(t => t.type === TransactionType.REVENUE && t.status === TransactionStatus.PENDING)
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const accountsPayable = transactions
+            .filter(t => t.type === TransactionType.EXPENSE && t.status === TransactionStatus.PENDING)
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        const totalExpense = transactions
+            .filter(t => t.type === TransactionType.EXPENSE && t.status === TransactionStatus.PAID)
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const currentBalance = totalRevenue - totalExpense;
+
+        return { totalRevenue, accountsReceivable, accountsPayable, currentBalance };
+    }, [transactions]);
+
     const filteredTransactions = useMemo(() => {
         switch (activeTab) {
             case 'receivables':
@@ -82,18 +131,36 @@ const Financial: React.FC = () => {
 
     const renderCashFlowChart = () => {
         const monthlyData = transactions.reduce((acc, t) => {
-            const month = new Date(t.date).toLocaleString('pt-BR', { month: 'short' });
-            if (!acc[month]) acc[month] = { name: month, Receitas: 0, Despesas: 0 };
-            if (t.type === TransactionType.REVENUE) acc[month].Receitas += t.amount;
-            else acc[month].Despesas += t.amount;
+            const date = new Date(t.transaction_date);
+            const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+            const monthName = date.toLocaleString('pt-BR', { month: 'short' });
+            
+            if (!acc[monthKey]) acc[monthKey] = { name: monthName, Receitas: 0, Despesas: 0 };
+            
+            if (t.status === TransactionStatus.PAID) {
+                if (t.type === TransactionType.REVENUE) acc[monthKey].Receitas += t.amount;
+                else acc[monthKey].Despesas += t.amount;
+            }
             return acc;
         }, {} as Record<string, { name: string; Receitas: number; Despesas: number }>);
+        
+        // Sort by month key and take the last 6 months
+        const sortedData = Object.entries(monthlyData)
+            .sort(([keyA], [keyB]) => {
+                const [yA, mA] = keyA.split('-').map(Number);
+                const [yB, mB] = keyB.split('-').map(Number);
+                if (yA !== yB) return yA - yB;
+                return mA - mB;
+            })
+            .slice(-6)
+            .map(([, value]) => value);
+
         return (
             <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={Object.values(monthlyData).reverse()}>
+                <BarChart data={sortedData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value: number) => `R$${value/1000}k`} />
+                    <YAxis tickFormatter={(value: number) => `R$${(value/1000).toFixed(1)}k`} />
                     <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     <Legend />
                     <Bar dataKey="Receitas" fill="#22c55e" radius={[4, 4, 0, 0]} />
@@ -125,14 +192,18 @@ const Financial: React.FC = () => {
                 {activeTab === 'overview' && (
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <KpiCard title="Faturamento Total" value={formatCurrency(financialKpis.totalRevenue)} icon={<DollarSignIcon className="w-6 h-6 text-green-500" />} color="bg-green-100" />
-                            <KpiCard title="Contas a Receber" value={formatCurrency(financialKpis.accountsReceivable)} icon={<ArrowUpCircleIcon className="w-6 h-6 text-blue-500" />} color="bg-blue-100" />
-                            <KpiCard title="Contas a Pagar" value={formatCurrency(financialKpis.accountsPayable)} icon={<ArrowDownCircleIcon className="w-6 h-6 text-red-500" />} color="bg-red-100" />
-                            <KpiCard title="Saldo Atual" value={formatCurrency(financialKpis.currentBalance)} icon={<DollarSignIcon className="w-6 h-6 text-yellow-500" />} color="bg-yellow-100" />
+                            <KpiCard title="Faturamento Total" value={formatCurrency(financialSummary.totalRevenue)} icon={<DollarSignIcon className="w-6 h-6 text-green-500" />} color="bg-green-100" />
+                            <KpiCard title="Contas a Receber" value={formatCurrency(financialSummary.accountsReceivable)} icon={<ArrowUpCircleIcon className="w-6 h-6 text-blue-500" />} color="bg-blue-100" />
+                            <KpiCard title="Contas a Pagar" value={formatCurrency(financialSummary.accountsPayable)} icon={<ArrowDownCircleIcon className="w-6 h-6 text-red-500" />} color="bg-red-100" />
+                            <KpiCard title="Saldo Atual" value={formatCurrency(financialSummary.currentBalance)} icon={<DollarSignIcon className="w-6 h-6 text-yellow-500" />} color="bg-yellow-100" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-dark-text mb-4">Fluxo de Caixa Mensal</h2>
-                            {renderCashFlowChart()}
+                            <h2 className="text-xl font-bold text-dark-text mb-4">Fluxo de Caixa Mensal (Pagos)</h2>
+                            {loading ? (
+                                <div className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando gráfico...</div>
+                            ) : (
+                                renderCashFlowChart()
+                            )}
                         </div>
                     </div>
                 )}
@@ -163,31 +234,37 @@ const Financial: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredTransactions.map(t => (
-                                        <tr key={t.id} className="border-b hover:bg-gray-50">
-                                            <td className="p-4">
-                                                <div className="flex items-center">
-                                                    {t.type === TransactionType.REVENUE ? <ArrowUpCircleIcon className="w-5 h-5 mr-3 text-green-500"/> : <ArrowDownCircleIcon className="w-5 h-5 mr-3 text-red-500"/>}
-                                                    <div>
-                                                        <p className="font-medium">{t.description}</p>
-                                                        <p className="text-sm text-gray-500">{t.category}</p>
+                                    {loading ? (
+                                        <tr><td colSpan={6} className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando transações...</td></tr>
+                                    ) : filteredTransactions.length === 0 ? (
+                                        <tr><td colSpan={6} className="text-center p-8 text-gray-500">Nenhuma transação encontrada.</td></tr>
+                                    ) : (
+                                        filteredTransactions.map(t => (
+                                            <tr key={t.id} className="border-b hover:bg-gray-50">
+                                                <td className="p-4">
+                                                    <div className="flex items-center">
+                                                        {t.type === TransactionType.REVENUE ? <ArrowUpCircleIcon className="w-5 h-5 mr-3 text-green-500"/> : <ArrowDownCircleIcon className="w-5 h-5 mr-3 text-red-500"/>}
+                                                        <div>
+                                                            <p className="font-medium">{t.description}</p>
+                                                            <p className="text-sm text-gray-500">{t.category}</p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-4">{new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                                            <td className="p-4">{t.dueDate ? new Date(t.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-                                            <td className={`p-4 font-medium ${t.type === TransactionType.REVENUE ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(t.amount)}</td>
-                                            <td className="p-4">
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${t.status === TransactionStatus.PAID ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                    {t.status}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 space-x-2 flex items-center">
-                                                <button onClick={() => handleOpenModal(t)} className="text-primary p-1 hover:bg-gray-200 rounded-full"><EditIcon className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDeleteTransaction(t.id)} className="text-red-500 p-1 hover:bg-gray-200 rounded-full"><TrashIcon className="w-4 h-4" /></button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                                <td className="p-4">{new Date(t.transaction_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                                <td className="p-4">{t.due_date ? new Date(t.due_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                                                <td className={`p-4 font-medium ${t.type === TransactionType.REVENUE ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(t.amount)}</td>
+                                                <td className="p-4">
+                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${t.status === TransactionStatus.PAID ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {t.status}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 space-x-2 flex items-center">
+                                                    <button onClick={() => handleOpenModal(t)} className="text-primary p-1 hover:bg-gray-200 rounded-full"><EditIcon className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDeleteTransaction(t.id)} className="text-red-500 p-1 hover:bg-gray-200 rounded-full"><TrashIcon className="w-4 h-4" /></button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>

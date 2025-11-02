@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, LogOutIcon } from './Icons';
-import { mockClients } from '../data/mockData';
-import { mockVehicles } from '../data/mockData';
-import type { AlertItem, AlertStatus } from '../types';
+import type { AlertItem, AlertStatus, Client, Vehicle } from '../types';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../integrations/supabase/client';
+import { fetchClients, fetchVehicles } from '../services/supabase';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -36,40 +35,69 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl: userAvatarUrl }) => {
   const [isAlertsOpen, setIsAlertsOpen] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [alertData, setAlertData] = useState<{ clients: Client[], vehicles: Vehicle[] }>({ clients: [], vehicles: [] });
   const alertsRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const loadAlertData = useCallback(async () => {
+    try {
+        const [clients, vehicles] = await Promise.all([
+            fetchClients(),
+            fetchVehicles()
+        ]);
+        setAlertData({ clients, vehicles });
+    } catch (error) {
+        console.error('Erro ao carregar dados de alerta:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAlertData();
+  }, [loadAlertData]);
+
   const alerts: AlertItem[] = useMemo(() => {
     const allAlerts: AlertItem[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-    mockClients.forEach(client => {
-      const status = getAlertStatus(client.cnhExpirationDate);
-      if (status !== 'ok') {
-        allAlerts.push({
-          id: `client-${client.id}`,
-          type: 'CNH',
-          message: `CNH de ${client.name}`,
-          date: client.cnhExpirationDate!,
-          status,
-        });
+    alertData.clients.forEach(client => {
+      const dateString = client.cnh_expiration_date;
+      if (dateString) {
+        const status = getAlertStatus(dateString);
+        
+        if (status !== 'ok') {
+            allAlerts.push({
+              id: `client-${client.id}`,
+              type: 'CNH',
+              message: `CNH de ${client.name}`,
+              date: dateString,
+              status,
+            });
+        }
       }
     });
 
-    mockVehicles.forEach(vehicle => {
-      const status = getAlertStatus(vehicle.licensingExpirationDate);
-      if (status !== 'ok') {
-        allAlerts.push({
-          id: `vehicle-${vehicle.id}`,
-          type: 'Licenciamento',
-          message: `Licenciamento de ${vehicle.plate}`,
-          date: vehicle.licensingExpirationDate!,
-          status,
-        });
+    alertData.vehicles.forEach(vehicle => {
+      const dateString = vehicle.licensing_expiration_date;
+      if (dateString) {
+        const status = getAlertStatus(dateString);
+        
+        if (status !== 'ok') {
+            allAlerts.push({
+              id: `vehicle-${vehicle.id}`,
+              type: 'Licenciamento',
+              message: `Licenciamento de ${vehicle.plate}`,
+              date: dateString,
+              status,
+            });
+        }
       }
     });
     
     return allAlerts.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, []);
+  }, [alertData]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

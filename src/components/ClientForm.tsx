@@ -1,32 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Client } from '../types';
 import { ClientType } from '../types';
 import { CameraIcon } from './Icons';
 
 interface ClientFormProps {
-    onSave: (client: Omit<Client, 'id' | 'docStatus'>) => void;
+    onSave: (clientData: Omit<Client, 'id' | 'user_id' | 'doc_status' | 'created_at'>, avatarFile: File | null) => Promise<void>;
     onCancel: () => void;
     client?: Client; // For editing
 }
 
 const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => {
-    const [clientType, setClientType] = useState(client?.clientType || ClientType.INDIVIDUAL);
+    const [clientType, setClientType] = useState(client?.client_type || ClientType.INDIVIDUAL);
     const [formData, setFormData] = useState({
         name: client?.name || '',
         phone: client?.phone || '',
-        maritalStatus: client?.maritalStatus || '',
+        marital_status: client?.marital_status || '',
         profession: client?.profession || '',
         nationality: client?.nationality || '',
         naturalness: client?.naturalness || '',
         email: client?.email || '',
         address: client?.address || '',
-        cpfCnpj: client?.cpfCnpj || '',
-        tradeName: client?.tradeName || '',
-        contactName: client?.contactName || '',
+        cpf_cnpj: client?.cpf_cnpj || '',
+        trade_name: client?.trade_name || '',
+        contact_name: client?.contact_name || '',
+        cnh_expiration_date: client?.cnh_expiration_date || '',
+        avatar_url: client?.avatar_url || '',
     });
 
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(client?.avatarUrl || null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(client?.avatar_url || null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (client) {
+            setClientType(client.client_type);
+            setFormData({
+                name: client.name,
+                phone: client.phone,
+                marital_status: client.marital_status || '',
+                profession: client.profession || '',
+                nationality: client.nationality || '',
+                naturalness: client.naturalness || '',
+                email: client.email,
+                address: client.address,
+                cpf_cnpj: client.cpf_cnpj,
+                trade_name: client.trade_name || '',
+                contact_name: client.contact_name || '',
+                cnh_expiration_date: client.cnh_expiration_date || '',
+                avatar_url: client.avatar_url,
+            });
+            setAvatarPreview(client.avatar_url || null);
+        }
+    }, [client]);
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -44,24 +69,36 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name || !formData.email || !formData.phone) {
-            alert('Nome, e-mail e telefone são obrigatórios.');
+        if (!formData.name || !formData.email || !formData.phone || !formData.cpf_cnpj) {
+            alert('Nome, CPF/CNPJ, e-mail e telefone são obrigatórios.');
             return;
         }
+        
+        setIsLoading(true);
 
-        const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = error => reject(error);
-        });
-
-        let avatarUrl = client?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=random&color=fff`;
-        if (avatarFile) {
-            avatarUrl = await toBase64(avatarFile);
+        try {
+            const clientDataToSave = {
+                ...formData,
+                client_type: clientType,
+                // Remove avatar_url from payload if we are uploading a file, 
+                // as the service function handles the URL update.
+                avatar_url: avatarFile ? undefined : formData.avatar_url,
+            };
+            
+            await onSave(clientDataToSave as Omit<Client, 'id' | 'user_id' | 'doc_status' | 'created_at'>, avatarFile);
+            
+            // Clean up temporary URL if one was created
+            if (avatarFile && avatarPreview && avatarPreview.startsWith('blob:')) {
+                URL.revokeObjectURL(avatarPreview);
+            }
+            
+            onCancel();
+        } catch (error) {
+            console.error("Erro ao salvar cliente:", error);
+            alert('Erro ao salvar cliente. Verifique o console para mais detalhes.');
+        } finally {
+            setIsLoading(false);
         }
-
-        onSave({ ...formData, avatarUrl, clientType });
     };
 
     const maritalStatusOptions = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'Outro'];
@@ -104,12 +141,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             {clientType === ClientType.COMPANY && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label htmlFor="tradeName" className="block text-sm font-medium text-gray-700">Nome Fantasia</label>
-                        <input type="text" name="tradeName" id="tradeName" value={formData.tradeName} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        <label htmlFor="trade_name" className="block text-sm font-medium text-gray-700">Nome Fantasia</label>
+                        <input type="text" name="trade_name" id="trade_name" value={formData.trade_name} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                     </div>
                     <div>
-                        <label htmlFor="contactName" className="block text-sm font-medium text-gray-700">Nome do Contato</label>
-                        <input type="text" name="contactName" id="contactName" value={formData.contactName} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        <label htmlFor="contact_name" className="block text-sm font-medium text-gray-700">Nome do Contato</label>
+                        <input type="text" name="contact_name" id="contact_name" value={formData.contact_name} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                     </div>
                 </div>
             )}
@@ -129,8 +166,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label htmlFor="maritalStatus" className="block text-sm font-medium text-gray-700">Estado Civil</label>
-                            <select id="maritalStatus" name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                            <label htmlFor="marital_status" className="block text-sm font-medium text-gray-700">Estado Civil</label>
+                            <select id="marital_status" name="marital_status" value={formData.marital_status} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                                 <option value="">Selecione...</option>
                                 {maritalStatusOptions.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
                             </select>
@@ -151,6 +188,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                             <input type="text" name="naturalness" id="naturalness" value={formData.naturalness} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                         </div>
                     </div>
+                    <div>
+                        <label htmlFor="cnh_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento CNH</label>
+                        <input type="date" name="cnh_expiration_date" id="cnh_expiration_date" value={formData.cnh_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    </div>
                 </>
             )}
             
@@ -160,16 +201,16 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
             <div>
-                <label htmlFor="cpfCnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'}</label>
-                <input type="text" name="cpfCnpj" id="cpfCnpj" value={formData.cpfCnpj} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'}</label>
+                <input type="text" name="cpf_cnpj" id="cpf_cnpj" value={formData.cpf_cnpj} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
             </div>
 
             <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
-                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300" disabled={isLoading}>
                     Cancelar
                 </button>
-                <button type="submit" className="btn-scale">
-                    Salvar Cliente
+                <button type="submit" className="btn-scale" disabled={isLoading}>
+                    {isLoading ? 'Salvando...' : 'Salvar Cliente'}
                 </button>
             </div>
         </form>

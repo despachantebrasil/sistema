@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import ServiceForm from '../components/ServiceForm';
-import { mockServices, mockClients, mockVehicles, serviceCatalog } from '../data/mockData';
-import type { Service, Transaction } from '../types';
+import { serviceCatalog } from '../data/mockData';
+import type { Service, Client, Vehicle, Transaction } from '../types';
 import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
-import { PlusIcon } from '../components/Icons';
+import { PlusIcon, LoaderIcon } from '../components/Icons';
+import { fetchServices, createService, fetchClients, fetchVehicles, createTransaction } from '../services/supabase';
 
 const getStatusBadge = (status: ServiceStatus) => {
     switch (status) {
@@ -25,33 +26,72 @@ const getStatusBadge = (status: ServiceStatus) => {
 };
 
 const Services: React.FC = () => {
-    const [services, setServices] = useState<Service[]>(mockServices);
+    const [services, setServices] = useState<Service[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const handleAddService = (newServiceData: Omit<Service, 'id'>) => {
-        const newService: Service = {
-            id: services.length > 0 ? Math.max(...services.map((s: Service) => s.id)) + 1 : 1,
-            ...newServiceData,
-        };
-        setServices([newService, ...services]);
-        setIsModalOpen(false);
+    const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
+    const vehicleMap = useMemo(() => new Map(vehicles.map(v => [v.id, v])), [vehicles]);
 
-        // --- Financial Integration ---
-        const client = mockClients.find(c => c.name === newService.clientName);
-        const newTransactionData: Omit<Transaction, 'id'> = {
-            description: `Serviço: ${newService.name} - ${newService.vehiclePlate}`,
-            category: 'Receita de Serviço',
-            date: new Date().toISOString().split('T')[0],
-            amount: newService.price,
-            type: TransactionType.REVENUE,
-            status: TransactionStatus.PENDING,
-            dueDate: newService.dueDate,
-            serviceId: newService.id,
-            clientId: client?.id,
-        };
-        // Dispatch a custom event to be caught by the Financial page
-        const event = new CustomEvent('transactionAdded', { detail: newTransactionData });
-        window.dispatchEvent(event);
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [serviceData, clientData, vehicleData] = await Promise.all([
+                fetchServices(),
+                fetchClients(),
+                fetchVehicles()
+            ]);
+            setClients(clientData);
+            setVehicles(vehicleData);
+            setServices(serviceData);
+        } catch (error) {
+            console.error('Erro ao carregar dados de serviços:', error);
+            alert('Não foi possível carregar a lista de serviços.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const servicesWithDetails = useMemo(() => {
+        return services.map(service => {
+            const client = clientMap.get(service.client_id || 0);
+            const vehicle = vehicleMap.get(service.vehicle_id || 0);
+            return {
+                ...service,
+                clientName: client?.name || 'Cliente Desconhecido',
+                vehiclePlate: vehicle?.plate || 'Veículo Desconhecido',
+            };
+        });
+    }, [services, clientMap, vehicleMap]);
+
+    const handleAddService = async (newServiceData: Omit<Service, 'id' | 'user_id' | 'status' | 'created_at'>) => {
+        try {
+            const savedService = await createService(newServiceData);
+
+            // --- Financial Integration ---
+            const newTransactionData: Omit<Transaction, 'id' | 'user_id' | 'created_at'> = {
+                description: `Serviço: ${savedService.name} - ${vehicleMap.get(savedService.vehicle_id || 0)?.plate || 'N/A'}`,
+                category: 'Receita de Serviço',
+                transaction_date: new Date().toISOString().split('T')[0],
+                amount: savedService.price,
+                type: TransactionType.REVENUE,
+                status: TransactionStatus.PENDING,
+                due_date: savedService.due_date,
+                service_id: savedService.id,
+                client_id: savedService.client_id,
+            };
+            await createTransaction(newTransactionData);
+            
+            await loadData(); // Recarrega a lista após salvar
+        } catch (error) {
+            throw error;
+        }
     };
 
     return (
@@ -80,26 +120,32 @@ const Services: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {services.map((service: Service) => (
-                                <tr key={service.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4 font-medium">{service.name}</td>
-                                    <td className="p-4">
-                                        <div>{service.clientName}</div>
-                                        <div className="text-sm text-gray-500">{service.vehiclePlate}</div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(service.status)}`}>
-                                            {service.status}
-                                        </span>
-                                    </td>
-                                    <td className="p-4">{new Date(service.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                                    <td className="p-4 font-medium">{service.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                                    <td className="p-4 space-x-2">
-                                        <button className="text-primary hover:underline">Ver</button>
-                                        <button className="text-red-500 hover:underline">Cancelar</button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {loading ? (
+                                <tr><td colSpan={6} className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando serviços...</td></tr>
+                            ) : servicesWithDetails.length === 0 ? (
+                                <tr><td colSpan={6} className="text-center p-8 text-gray-500">Nenhum serviço cadastrado.</td></tr>
+                            ) : (
+                                servicesWithDetails.map((service) => (
+                                    <tr key={service.id} className="border-b hover:bg-gray-50">
+                                        <td className="p-4 font-medium">{service.name}</td>
+                                        <td className="p-4">
+                                            <div>{service.clientName}</div>
+                                            <div className="text-sm text-gray-500">{service.vehiclePlate}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(service.status)}`}>
+                                                {service.status}
+                                            </span>
+                                        </td>
+                                        <td className="p-4">{new Date(service.due_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                        <td className="p-4 font-medium">{service.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                        <td className="p-4 space-x-2">
+                                            <button className="text-primary hover:underline">Ver</button>
+                                            <button className="text-red-500 hover:underline">Cancelar</button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -109,8 +155,8 @@ const Services: React.FC = () => {
                 <ServiceForm 
                     onSave={handleAddService} 
                     onCancel={() => setIsModalOpen(false)}
-                    clients={mockClients}
-                    vehicles={mockVehicles}
+                    clients={clients}
+                    vehicles={vehicles}
                     serviceCatalog={serviceCatalog}
                 />
             </Modal>

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import type { Service, Client, Vehicle, ServiceCategory } from '../types';
-import { ServiceStatus } from '../types';
 
 interface ServiceFormProps {
-    onSave: (service: Omit<Service, 'id'>) => void;
+    onSave: (service: Omit<Service, 'id' | 'user_id' | 'status' | 'created_at'>) => Promise<void>;
     onCancel: () => void;
     clients: Client[];
     vehicles: Vehicle[];
@@ -16,33 +15,35 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
     const [vehicleId, setVehicleId] = useState<number | ''>('');
     const [price, setPrice] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!serviceName || !clientId || !vehicleId || !price || !dueDate) {
             alert('Por favor, preencha todos os campos.');
             return;
         }
+        
+        setIsLoading(true);
 
-        const client = clients.find((c: Client) => c.id === Number(clientId));
-        const vehicle = vehicles.find((v: Vehicle) => v.id === Number(vehicleId));
-
-        if (!client || !vehicle) {
-             alert('Cliente ou veículo inválido.');
-            return;
+        try {
+            await onSave({
+                name: serviceName,
+                client_id: Number(clientId),
+                vehicle_id: Number(vehicleId),
+                price: parseFloat(price),
+                due_date: dueDate,
+            });
+            onCancel();
+        } catch (error) {
+            console.error("Erro ao salvar serviço:", error);
+            alert('Erro ao salvar serviço. Verifique o console para mais detalhes.');
+        } finally {
+            setIsLoading(false);
         }
-
-        onSave({
-            name: serviceName,
-            clientName: client.name,
-            vehiclePlate: vehicle.plate,
-            status: ServiceStatus.TODO,
-            price: parseFloat(price),
-            dueDate,
-        });
     };
     
-    const availableVehicles = clientId ? vehicles.filter((v: Vehicle) => v.ownerId === Number(clientId)) : [];
+    const availableVehicles = clientId ? vehicles.filter((v: Vehicle) => v.owner_id === Number(clientId)) : [];
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -54,6 +55,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setServiceName(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                     required
+                    disabled={isLoading}
                 >
                     <option value="" disabled>Selecione um tipo de serviço</option>
                     {serviceCatalog.map((category: ServiceCategory) => (
@@ -76,6 +78,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                     }}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                     required
+                    disabled={isLoading}
                 >
                     <option value="" disabled>Selecione um cliente</option>
                     {clients.map((client: Client) => (
@@ -91,7 +94,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVehicleId(Number(e.target.value))}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                     required
-                    disabled={!clientId}
+                    disabled={!clientId || isLoading}
                 >
                     <option value="" disabled>Selecione um veículo</option>
                     {availableVehicles.map((vehicle: Vehicle) => (
@@ -111,6 +114,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                         required
                         step="0.01"
                         min="0"
+                        disabled={isLoading}
                     />
                 </div>
                 <div>
@@ -122,15 +126,16 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDueDate(e.target.value)}
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                         required
+                        disabled={isLoading}
                     />
                 </div>
             </div>
             <div className="flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300" disabled={isLoading}>
                     Cancelar
                 </button>
-                <button type="submit" className="btn-scale">
-                    Salvar Serviço
+                <button type="submit" className="btn-scale" disabled={isLoading}>
+                    {isLoading ? 'Salvando...' : 'Salvar Serviço'}
                 </button>
             </div>
         </form>
