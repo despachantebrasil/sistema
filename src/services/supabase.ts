@@ -1,17 +1,61 @@
 import { supabase } from '../integrations/supabase/client';
-import type { AppUser, Role, Client, Vehicle, Service, Transaction } from '../types';
+import type { AppUser, Role, Client, Vehicle, Service, Transaction, AuditLog } from '../types';
 import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
+
+// --- Audit Log Functions ---
+
+/**
+ * Registra uma ação na tabela de auditoria.
+ * @param action A ação realizada (ex: 'CLIENT_CREATED').
+ * @param entityInfo O tipo e ID da entidade relacionada.
+ * @param details Detalhes adicionais em formato JSON.
+ */
+export const logAction = async (
+    action: string,
+    entityInfo: { type: string; id: string | number },
+    details?: Record<string, any>
+): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        console.warn('LogAction chamada sem um usuário autenticado.');
+        return;
+    }
+
+    const { error } = await supabase.from('audit_log').insert({
+        user_id: user.id,
+        action: action,
+        entity_type: entityInfo.type,
+        entity_id: String(entityInfo.id),
+        details: details || {},
+    });
+
+    if (error) {
+        console.error('Erro ao registrar ação de auditoria:', error);
+    }
+};
+
+/**
+ * Busca os logs de auditoria para uma entidade específica.
+ * @param entityType O tipo da entidade (ex: 'client').
+ * @param entityId O ID da entidade.
+ * @returns Uma lista de logs de auditoria.
+ */
+export const fetchAuditLogsForEntity = async (entityType: string, entityId: string | number): Promise<AuditLog[]> => {
+    const { data, error } = await supabase.rpc('get_audit_logs_for_entity', {
+        p_entity_type: entityType,
+        p_entity_id: String(entityId)
+    });
+
+    if (error) {
+        console.error('Erro ao buscar logs de auditoria:', error);
+        throw error;
+    }
+    return data as AuditLog[];
+};
+
 
 // --- Auth & User Management Functions ---
 
-/**
- * Cria um novo usuário, seu perfil e faz o upload do avatar.
- * @param email O e-mail do usuário.
- * @param password A senha do usuário.
- * @param userData Os metadados do usuário (nome completo e perfil).
- * @param avatarFile O arquivo de imagem do avatar (opcional).
- * @returns Os dados do usuário criado ou um erro.
- */
 export const createUserWithProfile = async (
     email: string,
     password: string,
@@ -61,6 +105,8 @@ export const createUserWithProfile = async (
             await supabase.from('profiles').update({ avatar_url: finalAvatarUrl }).eq('id', user.id);
         }
     }
+    
+    await logAction('USER_CREATED', { type: 'user', id: user.id }, { email: user.email, role: userData.role });
 
     const appUser: AppUser = {
         id: user.id,
@@ -73,14 +119,6 @@ export const createUserWithProfile = async (
 };
 
 
-/**
- * Atualiza um usuário existente, seu perfil e, opcionalmente, seu avatar.
- * @param userId O ID do usuário a ser atualizado.
- * @param userData Os novos dados do usuário.
- * @param password A nova senha (opcional).
- * @param avatarFile O novo arquivo de avatar (opcional).
- * @returns Os dados do usuário atualizado ou um erro.
- */
 export const updateUserWithProfile = async (
     userId: string,
     userData: { fullName: string; email: string; role: Role; avatarUrl?: string },
@@ -123,6 +161,8 @@ export const updateUserWithProfile = async (
         console.error('Erro ao invocar a função update-user:', error);
         return { user: null, error };
     }
+    
+    await logAction('USER_UPDATED', { type: 'user', id: userId }, { email: userData.email, role: userData.role });
 
     return { user: data.user, error: null };
 };
@@ -139,7 +179,6 @@ export const fetchClients = async (): Promise<Client[]> => {
     return data as Client[];
 };
 
-// O tipo de dado de entrada agora inclui doc_status, que é calculado no formulário.
 type ClientPayload = Omit<Client, 'id' | 'user_id' | 'created_at'>;
 
 export const createClient = async (clientData: ClientPayload, avatarFile: File | null): Promise<Client> => {
@@ -168,7 +207,6 @@ export const createClient = async (clientData: ClientPayload, avatarFile: File |
     const payload = {
         ...clientData,
         user_id: userId,
-        // Usamos o doc_status calculado no formulário, não sobrescrevemos para PENDING
         doc_status: clientData.doc_status, 
         avatar_url,
     };
@@ -180,6 +218,9 @@ export const createClient = async (clientData: ClientPayload, avatarFile: File |
         .single();
 
     if (error) throw error;
+    
+    await logAction('CLIENT_CREATED', { type: 'client', id: data.id }, { name: data.name, cpf_cnpj: data.cpf_cnpj });
+
     return data as Client;
 };
 
@@ -214,6 +255,9 @@ export const updateClient = async (clientId: number, clientData: Partial<ClientP
         .single();
 
     if (error) throw error;
+    
+    await logAction('CLIENT_UPDATED', { type: 'client', id: data.id }, { name: data.name });
+
     return data as Client;
 };
 
@@ -224,6 +268,8 @@ export const deleteClient = async (clientId: number): Promise<void> => {
         .eq('id', clientId);
 
     if (error) throw error;
+    
+    await logAction('CLIENT_DELETED', { type: 'client', id: clientId });
 };
 
 // --- Vehicle CRUD Operations ---
@@ -274,6 +320,9 @@ export const createVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'user_id' 
         .single();
 
     if (error) throw error;
+    
+    await logAction('VEHICLE_CREATED', { type: 'vehicle', id: data.id }, { plate: data.plate, owner_id: data.owner_id });
+
     return data as Vehicle;
 };
 
@@ -284,6 +333,8 @@ export const deleteVehicle = async (vehicleId: number): Promise<void> => {
         .eq('id', vehicleId);
 
     if (error) throw error;
+    
+    await logAction('VEHICLE_DELETED', { type: 'vehicle', id: vehicleId });
 };
 
 // --- Service CRUD Operations ---
@@ -316,6 +367,9 @@ export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' 
         .single();
 
     if (error) throw error;
+    
+    await logAction('SERVICE_CREATED', { type: 'service', id: data.id }, { name: data.name, client_id: data.client_id, vehicle_id: data.vehicle_id });
+
     return data as Service;
 };
 
@@ -348,6 +402,9 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
         .single();
 
     if (error) throw error;
+    
+    await logAction('TRANSACTION_CREATED', { type: 'transaction', id: data.id }, { description: data.description, amount: data.amount, type: data.type });
+
     return data as Transaction;
 };
 
@@ -360,6 +417,9 @@ export const updateTransaction = async (transactionId: number, transactionData: 
         .single();
 
     if (error) throw error;
+    
+    await logAction('TRANSACTION_UPDATED', { type: 'transaction', id: data.id });
+
     return data as Transaction;
 };
 
@@ -370,19 +430,19 @@ export const deleteTransaction = async (transactionId: number): Promise<void> =>
         .eq('id', transactionId);
 
     if (error) throw error;
+    
+    await logAction('TRANSACTION_DELETED', { type: 'transaction', id: transactionId });
 };
 
 // --- KPI/Report Functions ---
 
 export const fetchDashboardKpis = async () => {
-    // 1. Total Clients
     const { count: clientCount, error: clientError } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true });
 
     if (clientError) throw clientError;
 
-    // 2. Active Services (In Progress, Waiting Docs, To Do)
     const { count: activeServiceCount, error: serviceError } = await supabase
         .from('services')
         .select('*', { count: 'exact', head: true })
@@ -390,7 +450,6 @@ export const fetchDashboardKpis = async () => {
 
     if (serviceError) throw serviceError;
 
-    // 3. Monthly Revenue (Paid transactions this month)
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
@@ -407,9 +466,6 @@ export const fetchDashboardKpis = async () => {
     
     const totalRevenue = revenueData.reduce((sum, t) => sum + t.amount, 0);
 
-    // 4. Pending Alerts (CNH/Licensing expiring soon or expired)
-    // This requires fetching all clients and vehicles to calculate alerts on the client side, 
-    // as complex date logic is easier in JS than in a single Supabase query.
     const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select('id, name, cnh_expiration_date');
@@ -420,12 +476,8 @@ export const fetchDashboardKpis = async () => {
 
     if (clientsError || vehiclesError) {
         console.error("Error fetching data for alerts:", clientsError || vehiclesError);
-        // Continue with 0 alerts if fetching fails
     }
     
-    // The actual alert calculation logic will remain in the Header component for now, 
-    // but we return the raw data needed for it.
-
     return {
         clientCount: clientCount || 0,
         activeServiceCount: activeServiceCount || 0,

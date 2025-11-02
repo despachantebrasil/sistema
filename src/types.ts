@@ -178,3 +178,14 @@ export interface CompanyProfile {
     state: string;
     zip: string;
 }
+
+export interface AuditLog {
+  id: number;
+  created_at: string;
+  trace_code: string;
+  action: string;
+  user_id: string;
+  details: any;
+  user_full_name: string;
+  user_email: string;
+}

@@ -1,9 +1,9 @@
-import React from 'react';
-import type { Vehicle } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { Vehicle, AuditLog } from '../types';
 import Modal from './ui/Modal';
-import { PrinterIcon } from './Icons';
+import { PrinterIcon, ClockIcon, LoaderIcon } from './Icons';
+import { fetchAuditLogsForEntity } from '../services/supabase';
 
-// Estendendo o tipo Vehicle para incluir ownerName
 interface VehicleWithDetails extends Vehicle {
     ownerName: string;
 }
@@ -26,7 +26,6 @@ const DetailItem: React.FC<DetailItemProps> = ({ label, value }) => (
   </div>
 );
 
-// Componente otimizado e agora exportado para impressão
 export const PrintableVehicleDetails: React.FC<{ vehicle: VehicleWithDetails }> = ({ vehicle }) => (
     <div className="p-6 space-y-6 printable-card">
         <div className="flex justify-between items-start border-b pb-4 mb-4">
@@ -76,12 +75,60 @@ export const PrintableVehicleDetails: React.FC<{ vehicle: VehicleWithDetails }> 
 );
 
 const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onClose, onPrint }) => {
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
+
+  useEffect(() => {
+    if (vehicle) {
+        const loadLogs = async () => {
+            setLoadingLogs(true);
+            try {
+                const logData = await fetchAuditLogsForEntity('vehicle', vehicle.id);
+                setLogs(logData);
+            } catch (error) {
+                console.error("Falha ao carregar logs de auditoria", error);
+            } finally {
+                setLoadingLogs(false);
+            }
+        };
+        loadLogs();
+    }
+  }, [vehicle]);
+
   if (!vehicle) return null;
 
   return (
     <Modal isOpen={!!vehicle} onClose={onClose} title="Detalhes do Veículo">
-      <div>
+      <div className="max-h-[70vh] overflow-y-auto pr-4">
         <PrintableVehicleDetails vehicle={vehicle} />
+
+        <div className="mt-6">
+            <h2 className="text-xl font-semibold text-primary border-b pb-2">Histórico de Rastreabilidade</h2>
+            {loadingLogs ? (
+                <div className="text-center p-4"><LoaderIcon className="w-5 h-5 inline mr-2" /> Carregando histórico...</div>
+            ) : logs.length > 0 ? (
+                <div className="space-y-4 mt-4">
+                    {logs.map(log => (
+                        <div key={log.id} className="flex items-start">
+                            <div className="bg-gray-200 p-2 rounded-full mr-4 mt-1 flex-shrink-0">
+                                <ClockIcon className="w-5 h-5 text-gray-600" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-dark-text">{log.action.replace(/_/g, ' ')}</p>
+                                <p className="text-sm text-gray-600">
+                                    Código: <span className="font-mono bg-gray-100 px-1 rounded text-xs">{log.trace_code}</span>
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {new Date(log.created_at).toLocaleString('pt-BR')} por {log.user_full_name || log.user_email}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-gray-500 mt-4">Nenhum histórico encontrado para este veículo.</p>
+            )}
+        </div>
       </div>
 
       <div className="flex justify-end space-x-3 pt-4 border-t mt-6 no-print">

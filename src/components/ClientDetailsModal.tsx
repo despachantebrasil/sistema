@@ -1,13 +1,14 @@
-import React from 'react';
-import type { Client } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { Client, AuditLog } from '../types';
 import { ClientType } from '../types';
 import Modal from './ui/Modal';
-import { PrinterIcon } from './Icons';
+import { PrinterIcon, ClockIcon, LoaderIcon } from './Icons';
+import { fetchAuditLogsForEntity } from '../services/supabase';
 
 interface ClientDetailsModalProps {
   client: Client | null;
   onClose: () => void;
-  onPrint: (client: Client) => void; // Adicionando prop para chamar a impressão externa
+  onPrint: (client: Client) => void;
 }
 
 interface DetailItemProps {
@@ -23,7 +24,6 @@ const DetailItem: React.FC<DetailItemProps> = ({ label, value, uppercase = false
   </div>
 );
 
-// Componente otimizado para impressão (AGORA EXPORTADO)
 export const PrintableClientDetails: React.FC<{ client: Client }> = ({ client }) => {
     const isIndividual = client.client_type === ClientType.INDIVIDUAL;
     const avatarUrl = client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=0D47A1&color=fff`;
@@ -80,16 +80,65 @@ export const PrintableClientDetails: React.FC<{ client: Client }> = ({ client })
 };
 
 const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ client, onClose, onPrint }) => {
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(true);
+
+  useEffect(() => {
+    if (client) {
+        const loadLogs = async () => {
+            setLoadingLogs(true);
+            try {
+                const logData = await fetchAuditLogsForEntity('client', client.id);
+                setLogs(logData);
+            } catch (error) {
+                console.error("Falha ao carregar logs de auditoria", error);
+            } finally {
+                setLoadingLogs(false);
+            }
+        };
+        loadLogs();
+    }
+  }, [client]);
+
   if (!client) return null;
 
   return (
     <Modal isOpen={!!client} onClose={onClose} title={`Detalhes do Cliente: ${client.name}`}>
-        {/* O conteúdo do modal é renderizado aqui */}
-        <PrintableClientDetails client={client} />
+        <div className="max-h-[70vh] overflow-y-auto pr-4">
+            <PrintableClientDetails client={client} />
+
+            <div className="mt-6">
+                <h2 className="text-xl font-semibold text-primary border-b pb-2">Histórico de Rastreabilidade</h2>
+                {loadingLogs ? (
+                    <div className="text-center p-4"><LoaderIcon className="w-5 h-5 inline mr-2" /> Carregando histórico...</div>
+                ) : logs.length > 0 ? (
+                    <div className="space-y-4 mt-4">
+                        {logs.map(log => (
+                            <div key={log.id} className="flex items-start">
+                                <div className="bg-gray-200 p-2 rounded-full mr-4 mt-1 flex-shrink-0">
+                                    <ClockIcon className="w-5 h-5 text-gray-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-dark-text">{log.action.replace(/_/g, ' ')}</p>
+                                    <p className="text-sm text-gray-600">
+                                        Código: <span className="font-mono bg-gray-100 px-1 rounded text-xs">{log.trace_code}</span>
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {new Date(log.created_at).toLocaleString('pt-BR')} por {log.user_full_name || log.user_email}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-500 mt-4">Nenhum histórico encontrado para este cliente.</p>
+                )}
+            </div>
+        </div>
 
         <div className="flex justify-end space-x-3 pt-4 border-t mt-6 no-print">
             <button 
-                onClick={() => onPrint(client)} // Chama a função de impressão passada por prop
+                onClick={() => onPrint(client)}
                 className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
             >
                 <PrinterIcon className="w-5 h-5 mr-2" />
