@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import type { Service, Client, Vehicle, ServiceCategory } from '../types';
+import { ServiceStatus } from '../types';
+
+// O tipo de dado que o formulário retorna para o onSave (snake_case para o Supabase)
+interface ServiceFormPayload extends Omit<Service, 'id' | 'user_id' | 'created_at'> {}
 
 interface ServiceFormProps {
-    onSave: (service: Omit<Service, 'id' | 'user_id' | 'status' | 'created_at'>) => Promise<void>;
+    onSave: (service: ServiceFormPayload) => Promise<void>;
     onCancel: () => void;
     clients: Client[];
     vehicles: Vehicle[];
@@ -15,25 +19,56 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
     const [vehicleId, setVehicleId] = useState<number | ''>('');
     const [price, setPrice] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
+    const [isPayerSameAsClient, setIsPayerSameAsClient] = useState(true);
+    const [payerClientId, setPayerClientId] = useState<number | ''>('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!serviceName || !clientId || !vehicleId || !price || !dueDate) {
-            alert('Por favor, preencha todos os campos.');
+            alert('Por favor, preencha todos os campos obrigatórios.');
             return;
+        }
+
+        const client = clients.find((c: Client) => c.id === Number(clientId));
+        const vehicle = vehicles.find((v: Vehicle) => v.id === Number(vehicleId));
+
+        if (!client || !vehicle) {
+             alert('Cliente ou veículo inválido.');
+            return;
+        }
+
+        let finalPayerClientId: number | undefined = client.id;
+        let finalPayerClientName: string | undefined = client.name;
+
+        if (!isPayerSameAsClient) {
+            const payerClient = clients.find(c => c.id === Number(payerClientId));
+            if (!payerClient) {
+                alert('Pagador inválido selecionado.');
+                return;
+            }
+            finalPayerClientId = payerClient.id;
+            finalPayerClientName = payerClient.name;
+        } else {
+            finalPayerClientId = client.id;
+            finalPayerClientName = client.name;
         }
         
         setIsLoading(true);
 
         try {
-            await onSave({
+            const servicePayload: ServiceFormPayload = {
                 name: serviceName,
                 client_id: Number(clientId),
                 vehicle_id: Number(vehicleId),
                 price: parseFloat(price),
                 due_date: dueDate,
-            });
+                payer_client_id: finalPayerClientId,
+                payer_client_name: finalPayerClientName,
+                status: ServiceStatus.TODO, // Status é obrigatório no payload do Supabase
+            };
+            
+            await onSave(servicePayload);
             onCancel();
         } catch (error) {
             console.error("Erro ao salvar serviço:", error);
@@ -68,7 +103,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                 </select>
             </div>
             <div>
-                <label htmlFor="client" className="block text-sm font-medium text-gray-700">Cliente</label>
+                <label htmlFor="client" className="block text-sm font-medium text-gray-700">Cliente (Proprietário do Veículo)</label>
                 <select
                     id="client"
                     value={clientId}
@@ -102,7 +137,43 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                     ))}
                 </select>
             </div>
-             <div className="grid grid-cols-2 gap-4">
+
+            <div className="pt-2">
+                <div className="flex items-center">
+                    <input
+                        id="payer-checkbox"
+                        type="checkbox"
+                        checked={isPayerSameAsClient}
+                        onChange={(e) => setIsPayerSameAsClient(e.target.checked)}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                        disabled={isLoading}
+                    />
+                    <label htmlFor="payer-checkbox" className="ml-2 block text-sm text-gray-900">
+                        O pagador é o mesmo que o cliente
+                    </label>
+                </div>
+            </div>
+
+            {!isPayerSameAsClient && (
+                <div>
+                    <label htmlFor="payer" className="block text-sm font-medium text-gray-700">Pagador do Serviço</label>
+                    <select
+                        id="payer"
+                        value={payerClientId}
+                        onChange={(e) => setPayerClientId(Number(e.target.value))}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                        required
+                        disabled={isLoading}
+                    >
+                        <option value="" disabled>Selecione um pagador</option>
+                        {clients.map((c: Client) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
+             <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>
                     <label htmlFor="price" className="block text-sm font-medium text-gray-700">Preço (R$)</label>
                     <input

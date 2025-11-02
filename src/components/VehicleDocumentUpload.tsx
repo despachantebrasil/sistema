@@ -37,13 +37,13 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
 
                 try {
                     const typedarray = new Uint8Array(e.target.result as ArrayBuffer);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    const pdf = await (pdfjsLib as any).getDocument(typedarray).promise;
                     let textContent = '';
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const text = await page.getTextContent();
-                        textContent += text.items.map(item => ('str' in item ? item.str : '')).join(' ');
+                        textContent += text.items.map((item: { str: string }) => ('str' in item ? item.str : '')).join(' ');
                     }
                     
                     if (!textContent.trim()) {

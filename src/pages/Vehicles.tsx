@@ -3,10 +3,10 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal from '../components/VehicleDetailsModal';
-import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; // Importando o novo componente
-import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
+import VehicleDocumentUpload from '../components/VehicleDocumentUpload';
+import type { Vehicle, AlertStatus, Client, ExtractedVehicleData, VehicleComponentProps } from '../types';
 import { PlusIcon, LoaderIcon } from '../components/Icons';
-import { fetchVehicles, createVehicle, fetchClients, deleteClient } from '../services/supabase';
+import { fetchVehicles, createVehicle, fetchClients, deleteVehicle } from '../services/supabase'; // Corrigido para deleteVehicle
 
 // Helper function to determine alert status (kept local as it's UI logic)
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
@@ -48,7 +48,7 @@ const ExpirationDate: React.FC<{ date?: string }> = ({ date }) => {
 }
 
 // Definindo o tipo Vehicle com o nome do proprietário para uso na tabela
-type VehicleWithOwnerName = Vehicle & { ownerName: string };
+type VehicleWithOwnerName = VehicleComponentProps;
 
 const Vehicles: React.FC = () => {
     const [vehicles, setVehicles] = useState<VehicleWithOwnerName[]>([]);
@@ -70,12 +70,24 @@ const Vehicles: React.FC = () => {
             const vehiclesWithNames: VehicleWithOwnerName[] = vehicleData.map(v => {
                 const owner = clientData.find(c => c.id === v.owner_id);
                 return {
-                    ...v,
+                    id: v.id,
+                    plate: v.plate,
+                    chassis: v.chassis,
+                    renavam: v.renavam,
+                    brand: v.brand,
+                    model: v.model,
+                    color: v.color,
+                    ownerId: v.owner_id,
                     ownerName: owner ? owner.name : 'Desconhecido',
+                    yearManufacture: v.year_manufacture,
+                    yearModel: v.year_model,
+                    fuelType: v.fuel_type,
+                    licensingExpirationDate: v.licensing_expiration_date,
+                    imageUrls: v.image_urls,
                 };
             });
             setVehicles(vehiclesWithNames);
-        } catch (error) => {
+        } catch (error) {
             console.error('Erro ao carregar dados:', error);
             alert('Não foi possível carregar a lista de veículos.');
         } finally {
@@ -99,7 +111,7 @@ const Vehicles: React.FC = () => {
     const handleDeleteVehicle = async (vehicleId: number, plate: string) => {
         if (window.confirm(`Tem certeza que deseja excluir o veículo de placa "${plate}"?`)) {
             try {
-                await deleteClient(vehicleId); 
+                await deleteVehicle(vehicleId); // Usando deleteVehicle
                 await loadData();
             } catch (error) {
                 console.error('Erro ao excluir veículo:', error);
@@ -173,12 +185,12 @@ const Vehicles: React.FC = () => {
                                         </td>
                                         <td className="p-4">
                                             <div className="font-medium">{vehicle.brand} {vehicle.model}</div>
-                                            <div className="text-sm text-gray-500">{vehicle.color} ({vehicle.year_manufacture}/{vehicle.year_model})</div>
+                                            <div className="text-sm text-gray-500">{vehicle.color} ({vehicle.yearManufacture}/{vehicle.yearModel})</div>
                                         </td>
                                         <td className="p-4">{vehicle.ownerName}</td>
                                         <td className="p-4 font-mono">{vehicle.renavam}</td>
                                         <td className="p-4">
-                                            <ExpirationDate date={vehicle.licensing_expiration_date} />
+                                            <ExpirationDate date={vehicle.licensingExpirationDate} />
                                         </td>
                                         <td className="p-4 space-x-2">
                                             <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline">Detalhes</button>
@@ -199,7 +211,7 @@ const Vehicles: React.FC = () => {
                     onSave={handleSaveVehicle}
                     onCancel={handleCloseModal}
                     clients={clients}
-                    prefilledData={prefilledData} // Passando os dados para o formulário
+                    prefilledData={prefilledData}
                 />
             </Modal>
         </div>

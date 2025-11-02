@@ -21,20 +21,20 @@ export interface Client {
   id: number;
   user_id: string; // Chave estrangeira para auth.users
   name: string;
-  cpf_cnpj: string; // Alterado para snake_case para corresponder ao DB
+  cpf_cnpj: string; 
   email: string;
   phone: string;
   address: string;
-  avatar_url: string; // Alterado para snake_case
-  doc_status: ClientDocStatus; // Alterado para snake_case
-  client_type: ClientType; // Alterado para snake_case
-  marital_status?: string; // Alterado para snake_case
+  avatar_url: string; 
+  doc_status: ClientDocStatus; 
+  client_type: ClientType; 
+  marital_status?: string; 
   profession?: string;
   nationality?: string;
   naturalness?: string;
-  cnh_expiration_date?: string; // YYYY-MM-DD, Alterado para snake_case
-  trade_name?: string; // Nome Fantasia for Pessoa Jurídica, Alterado para snake_case
-  contact_name?: string; // Nome do Contato for Pessoa Jurídica, Alterado para snake_case
+  cnh_expiration_date?: string; // YYYY-MM-DD
+  trade_name?: string; // Nome Fantasia for Pessoa Jurídica
+  contact_name?: string; // Nome do Contato for Pessoa Jurídica
   created_at: string;
 }
 
@@ -47,13 +47,24 @@ export interface Vehicle {
   renavam: string;
   brand: string;
   model: string;
-  year_manufacture: number; // Alterado para snake_case
-  year_model: number; // Alterado para snake_case
+  year_manufacture: number; 
+  year_model: number; 
   color: string;
-  fuel_type?: string; // Alterado para snake_case
-  licensing_expiration_date?: string; // YYYY-MM-DD, Alterado para snake_case
-  image_urls?: string[]; // Alterado para snake_case
+  fuel_type?: string; 
+  licensing_expiration_date?: string; // YYYY-MM-DD
+  image_urls?: string[]; 
   created_at: string;
+}
+
+// Tipo para uso em componentes (camelCase para melhor legibilidade em JS/TS)
+export interface VehicleComponentProps extends Omit<Vehicle, 'user_id' | 'owner_id' | 'year_manufacture' | 'year_model' | 'fuel_type' | 'licensing_expiration_date' | 'image_urls' | 'created_at' | 'cpf_cnpj' | 'doc_status' | 'client_type' | 'marital_status' | 'cnh_expiration_date' | 'trade_name' | 'contact_name'> {
+    ownerId: number;
+    ownerName: string; // Adicionado para facilitar a exibição
+    yearManufacture: number;
+    yearModel: number;
+    fuelType?: string;
+    licensingExpirationDate?: string;
+    imageUrls?: string[];
 }
 
 // Novo tipo para os dados extraídos do documento do veículo
@@ -63,12 +74,14 @@ export type ExtractedVehicleData = Partial<Omit<Vehicle, 'id' | 'user_id' | 'own
 export interface Service {
   id: number;
   user_id: string; // Chave estrangeira para auth.users
-  client_id?: number; // ID do cliente
+  client_id?: number; // ID do cliente (proprietário do veículo)
   vehicle_id?: number; // ID do veículo
   name: string;
   status: ServiceStatus;
-  due_date: string; // YYYY-MM-DD, Alterado para snake_case
+  due_date: string; // YYYY-MM-DD
   price: number;
+  payer_client_id?: number; // Novo campo
+  payer_client_name?: string; // Novo campo
   created_at: string;
 }
 
@@ -100,13 +113,13 @@ export interface Transaction {
   user_id: string; // Chave estrangeira para auth.users
   description: string;
   category: string;
-  transaction_date: string; // YYYY-MM-DD, Alterado para snake_case
+  transaction_date: string; // YYYY-MM-DD
   amount: number;
   type: TransactionType;
   status: TransactionStatus;
-  due_date?: string; // YYYY-MM-DD, Alterado para snake_case
-  client_id?: number; // Alterado para snake_case
-  service_id?: number; // Alterado para snake_case
+  due_date?: string; // YYYY-MM-DD
+  client_id?: number; // ID do cliente pagador/relacionado
+  service_id?: number; // ID do serviço
   created_at: string;
 }
 
