@@ -4,7 +4,6 @@ import { mockClients } from '../data/mockData';
 import { mockVehicles } from '../data/mockData';
 import type { AlertItem, AlertStatus } from '../types';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../integrations/supabase/client';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
   if (!dateString) return 'ok';
@@ -94,7 +93,7 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    alert('O sistema de login está desativado.');
   };
 
   const user = session.user;
