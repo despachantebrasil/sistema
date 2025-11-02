@@ -53,6 +53,8 @@ export interface Vehicle {
   fuel_type?: string; // Alterado para snake_case
   licensing_expiration_date?: string; // YYYY-MM-DD, Alterado para snake_case
   image_urls?: string[]; // Alterado para snake_case
+  category?: string; // Novo campo: Categoria (Ex: Particular, Aluguel)
+  capacity_power_cc?: string; // Novo campo: Capacidade/Potência/Cilindrada
   created_at: string;
 }
 

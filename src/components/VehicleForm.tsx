@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Vehicle, Client, ExtractedVehicleData } from '../types';
 import { CameraIcon, CloseIcon } from './Icons';
-import UppercaseInput from './ui/UppercaseInput'; // Importando o novo componente
+import UppercaseInput from './ui/UppercaseInput';
 
 interface VehicleFormProps {
     onSave: (vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles: File[]) => Promise<void>;
@@ -24,6 +24,8 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         fuel_type: vehicle?.fuel_type || prefilledData?.fuel_type || '',
         owner_id: vehicle?.owner_id || '',
         licensing_expiration_date: vehicle?.licensing_expiration_date || prefilledData?.licensing_expiration_date || '',
+        category: vehicle?.category || '', // Novo campo
+        capacity_power_cc: vehicle?.capacity_power_cc || '', // Novo campo
     });
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.image_urls || []);
@@ -103,13 +105,26 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             setIsLoading(false);
         }
     };
+    
+    const fuelTypeOptions = [
+        'GASOLINA', 'ÁLCOOL', 'FLEX (ÁLCOOL/GASOLINA)', 'DIESEL', 'GNV', 'ELÉTRICO', 'HÍBRIDO'
+    ];
+    
+    const categoryOptions = [
+        'PARTICULAR', 'ALUGUEL', 'OFICIAL', 'APRENDIZAGEM', 'COLEÇÃO', 'EXPERIÊNCIA/FABRICANTE'
+    ];
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Seção 1: Identificação Principal */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="plate" className="block text-sm font-medium text-gray-700">Placa</label>
                     <UppercaseInput type="text" name="plate" id="plate" value={formData.plate} onChange={handleChange} required />
+                </div>
+                <div>
+                    <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
+                    <UppercaseInput type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required />
                 </div>
                 <div>
                     <label htmlFor="owner_id" className="block text-sm font-medium text-gray-700">Proprietário</label>
@@ -121,8 +136,14 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                     </select>
                 </div>
             </div>
+            
+            <div>
+                <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
+                <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required />
+            </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Seção 2: Características do Veículo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Marca</label>
                     <UppercaseInput type="text" name="brand" id="brand" value={formData.brand} onChange={handleChange} required />
@@ -133,42 +154,43 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                    <label htmlFor="year_manufacture" className="block text-sm font-medium text-gray-700">Ano Fabricação</label>
+                    <label htmlFor="year_manufacture" className="block text-sm font-medium text-gray-700">Ano Fab.</label>
                     <input type="number" name="year_manufacture" id="year_manufacture" value={formData.year_manufacture} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="year_model" className="block text-sm font-medium text-gray-700">Ano Modelo</label>
+                    <label htmlFor="year_model" className="block text-sm font-medium text-gray-700">Ano Mod.</label>
                     <input type="number" name="year_model" id="year_model" value={formData.year_model} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor</label>
+                    <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor Predominante</label>
                     <UppercaseInput type="text" name="color" id="color" value={formData.color} onChange={handleChange} required />
                 </div>
                 <div>
                     <label htmlFor="fuel_type" className="block text-sm font-medium text-gray-700">Combustível</label>
                     <select id="fuel_type" name="fuel_type" value={formData.fuel_type} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                         <option value="">Selecione...</option>
-                        <option value="Gasolina">Gasolina</option>
-                        <option value="Álcool">Álcool</option>
-                        <option value="Flex (Álcool/Gasolina)">Flex (Álcool/Gasolina)</option>
-                        <option value="Diesel">Diesel</option>
-                        <option value="GNV">GNV</option>
-                        <option value="Elétrico">Elétrico</option>
-                        <option value="Híbrido">Híbrido</option>
+                        {fuelTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}
                     </select>
                 </div>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoria</label>
+                    <select id="category" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                        <option value="">Selecione...</option>
+                        {categoryOptions.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="capacity_power_cc" className="block text-sm font-medium text-gray-700">Capacidade/Potência/Cilindrada</label>
+                    <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="Ex: 5 PES / 100 CV / 1000 CC" />
+                </div>
+            </div>
 
-            <div>
-                <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
-                <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required />
-            </div>
-             <div>
-                <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
-                <UppercaseInput type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required />
-            </div>
+            {/* Seção 3: Documentação e Mídia */}
             <div>
                 <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
                 <input type="date" name="licensing_expiration_date" id="licensing_expiration_date" value={formData.licensing_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />

@@ -32,15 +32,22 @@ const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onCl
       <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-light-bg rounded-lg border">
           <DetailItem label="Placa" value={vehicle.plate} />
+          <DetailItem label="Proprietário" value={vehicle.ownerName} />
+          <DetailItem label="Venc. Licenc." value={vehicle.licensing_expiration_date ? new Date(vehicle.licensing_expiration_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'} />
+          
           <DetailItem label="Marca" value={vehicle.brand} />
           <DetailItem label="Modelo" value={vehicle.model} />
+          <DetailItem label="Cor" value={vehicle.color} />
+          
           <DetailItem label="Ano Fabricação" value={vehicle.year_manufacture} />
           <DetailItem label="Ano Modelo" value={vehicle.year_model} />
-          <DetailItem label="Cor" value={vehicle.color} />
           <DetailItem label="Combustível" value={vehicle.fuel_type} />
-          <DetailItem label="Proprietário" value={vehicle.ownerName} />
+          
           <DetailItem label="Chassi" value={vehicle.chassis} />
           <DetailItem label="RENAVAM" value={vehicle.renavam} />
+          <DetailItem label="Categoria" value={vehicle.category} />
+          
+          <DetailItem label="Capacidade/Potência/CC" value={vehicle.capacity_power_cc} />
         </div>
 
         <div>
