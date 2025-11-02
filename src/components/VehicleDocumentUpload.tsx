@@ -6,17 +6,18 @@ import * as pdfjsLib from 'pdfjs-dist';
 // Importa o caminho do worker diretamente do pacote instalado
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-// Configuração do worker para o pdfjs-dist
-// Usando o caminho importado para garantir que o Vite resolva corretamente
-// Esta linha deve ser executada antes de qualquer chamada a getDocument
-if (!(pdfjsLib as any).GlobalWorkerOptions.workerSrc) {
-    (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-}
+// Configuração direta do worker para o pdfjs-dist
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 interface VehicleDocumentUploadProps {
     onDataExtracted: (data: ExtractedVehicleData) => void;
     onError: (message: string) => void;
 }
+
+// Helper type guard para verificar se o item é um TextItem (que contém 'str')
+const isTextItem = (item: any): item is { str: string } => {
+    return typeof item === 'object' && item !== null && 'str' in item;
+};
 
 const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExtracted, onError }) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -44,14 +45,15 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
                 try {
                     const typedarray = new Uint8Array(e.target.result as ArrayBuffer);
                     // Usando (pdfjsLib as any) para evitar problemas de tipagem com getDocument
-                    const pdf = await (pdfjsLib as any).getDocument(typedarray).promise;
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
                     let textContent = '';
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const text = await page.getTextContent();
-                        // Mapeia os itens de texto para strings e junta-os
-                        textContent += text.items.map((item: { str: string }) => ('str' in item ? item.str : '')).join(' ');
+                        
+                        // Corrigido o erro de tipagem: verifica se o item é um TextItem antes de acessar 'str'
+                        textContent += text.items.map((item) => (isTextItem(item) ? item.str : '')).join(' ');
                     }
                     
                     if (!textContent.trim()) {
