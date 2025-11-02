@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { MenuIcon, SearchIcon, BellIcon, ChevronDownIcon, UsersIcon, CarIcon, LogOutIcon } from './Icons';
-import type { AlertItem, AlertStatus, Client, Vehicle } from '../types';
-import type { Session } from '@supabase/supabase-js';
+import type { AlertItem, AlertStatus, Client, Vehicle, Role } from '../types';
 import { supabase } from '../integrations/supabase/client';
 import { fetchClients, fetchVehicles } from '../services/supabase';
 
@@ -27,12 +26,13 @@ const getAlertStatus = (dateString: string | undefined): AlertStatus => {
 
 interface HeaderProps {
   title: string;
-  session: Session;
+  userName: string;
+  userRole: Role;
   onMenuClick: () => void;
   avatarUrl: string | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl: userAvatarUrl }) => {
+const Header: React.FC<HeaderProps> = ({ title, userName, userRole, onMenuClick, avatarUrl: userAvatarUrl }) => {
   const [isAlertsOpen, setIsAlertsOpen] = useState<boolean>(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [alertData, setAlertData] = useState<{ clients: Client[], vehicles: Vehicle[] }>({ clients: [], vehicles: [] });
@@ -129,9 +129,8 @@ const Header: React.FC<HeaderProps> = ({ title, session, onMenuClick, avatarUrl:
     }
   };
 
-  const user = session.user;
-  const fullName = user?.user_metadata?.full_name || 'Usuário';
-  const role = user?.user_metadata?.role || 'Despachante';
+  const fullName = userName || 'Usuário';
+  const role = userRole || 'Despachante';
   const avatarUrl = userAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName as string)}&background=0D47A1&color=fff`;
 
   return (

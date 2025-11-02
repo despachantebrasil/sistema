@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
   const [userRole, setUserRole] = useState<Role>('Usuário');
+  const [userName, setUserName] = useState<string>('Usuário');
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -37,6 +38,7 @@ const App: React.FC = () => {
       if (!session) {
         // Clear user-specific state on logout
         setUserRole('Usuário');
+        setUserName('Usuário');
         setUserAvatarUrl(null);
       }
     });
@@ -51,7 +53,7 @@ const App: React.FC = () => {
       if (session?.user) {
         const { data, error } = await supabase
           .from('profiles')
-          .select('role, avatar_url')
+          .select('role, avatar_url, first_name, last_name')
           .eq('id', session.user.id)
           .single();
 
@@ -60,6 +62,8 @@ const App: React.FC = () => {
         } else if (data) {
           setUserRole(data.role as Role);
           setUserAvatarUrl(data.avatar_url);
+          const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+          setUserName(fullName || 'Usuário');
         }
       }
     };
@@ -120,7 +124,8 @@ const App: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden no-print">
         <Header 
           title={pageTitles[currentPage]} 
-          session={session}
+          userName={userName}
+          userRole={userRole}
           onMenuClick={() => setIsSidebarOpen(true)}
           avatarUrl={userAvatarUrl}
         />
