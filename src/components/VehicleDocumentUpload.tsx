@@ -2,12 +2,7 @@ import React, { useState, useRef } from 'react';
 import { SparklesIcon, LoaderIcon } from './Icons';
 import { extractVehicleDataFromDocument } from '../services/geminiService';
 import type { ExtractedVehicleData } from '../types';
-import * as pdfjsLib from 'pdfjs-dist';
-// Importa o caminho do worker diretamente do pacote instalado
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.js?url';
-
-// Configuração direta do worker para o pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+import * as pdfjsLib from 'pdfjs-dist'; // Importa pdfjsLib diretamente
 
 interface VehicleDocumentUploadProps {
     onDataExtracted: (data: ExtractedVehicleData) => void;
@@ -44,16 +39,16 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
 
                 try {
                     const typedarray = new Uint8Array(e.target.result as ArrayBuffer);
-                    // Usando (pdfjsLib as any) para evitar problemas de tipagem com getDocument
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    // Usando pdfjsLib importado diretamente
+                    const pdf = await (pdfjsLib as any).getDocument(typedarray).promise;
                     let textContent = '';
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const text = await page.getTextContent();
                         
-                        // Corrigido o erro de tipagem: verifica se o item é um TextItem antes de acessar 'str'
-                        textContent += text.items.map((item) => (isTextItem(item) ? item.str : '')).join(' ');
+                        // Tipagem 'any' explícita para resolver TS7006 (já corrigido anteriormente)
+                        textContent += text.items.map((item: any) => (isTextItem(item) ? item.str : '')).join(' ');
                     }
                     
                     if (!textContent.trim()) {
