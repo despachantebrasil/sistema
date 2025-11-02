@@ -4,7 +4,6 @@ import { ClientType, ClientDocStatus } from '../types';
 import { CameraIcon } from './Icons';
 
 interface ClientFormProps {
-    // O onSave agora espera o payload completo (Omitindo apenas id, user_id e created_at)
     onSave: (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null) => Promise<void>;
     onCancel: () => void;
     client?: Client; // For editing
@@ -126,14 +125,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                 ...formData,
                 client_type: clientType,
                 doc_status: newDocStatus, // Adicionando o status calculado
-                // Remove avatar_url from payload if we are uploading a file, 
-                // as the service function handles the URL update.
                 avatar_url: avatarFile ? undefined : formData.avatar_url,
             } as Omit<Client, 'id' | 'user_id' | 'created_at'>;
             
             await onSave(clientDataToSave, avatarFile);
             
-            // Clean up temporary URL if one was created
             if (avatarFile && avatarPreview && avatarPreview.startsWith('blob:')) {
                 URL.revokeObjectURL(avatarPreview);
             }
