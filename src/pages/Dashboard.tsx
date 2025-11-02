@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { dashboardKpisV2, mockNotifications } from '../data/mockData';
+import { dashboardKpisV2 } from '../data/mockData';
 import { UsersIcon, FileTextIcon, DollarSignIcon, WarningIcon, LoaderIcon } from '../components/Icons';
 import type { DashboardKpiV2, NotificationItem, Service, Client, Vehicle } from '../types';
 import { ServiceStatus } from '../types';
@@ -108,12 +108,17 @@ const notificationColors: Record<NotificationItem['color'], string> = {
   green: 'border-green-400',
 };
 
-const AlertsAndNotifications: React.FC<{ notifications: NotificationItem[] }> = ({ notifications }) => {
+const AlertsAndNotifications: React.FC<{ notifications: NotificationItem[], loading: boolean }> = ({ notifications, loading }) => {
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg h-full">
             <h3 className="text-xl font-bold text-dark-text">Alertas e Notificações</h3>
             <div className="mt-4 space-y-4">
-                {notifications.map((item: NotificationItem) => (
+                {loading ? (
+                    <div className="p-4 rounded-lg bg-light-bg border-l-4 border-blue-400">
+                        <p className="font-semibold text-dark-text">Carregando...</p>
+                        <p className="text-sm text-medium-text">Buscando alertas de vencimento.</p>
+                    </div>
+                ) : notifications.map((item: NotificationItem) => (
                     <div key={item.id} className={`p-4 rounded-lg bg-light-bg border-l-4 ${notificationColors[item.color]}`}>
                         <p className="font-semibold text-dark-text">{item.title}</p>
                         <p className="text-sm text-medium-text">{item.description}</p>
@@ -204,6 +209,7 @@ const Dashboard: React.FC = () => {
     const [services, setServices] = useState<Service[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
@@ -235,6 +241,43 @@ const Dashboard: React.FC = () => {
             const cnhAlerts = clientData.filter(c => c.cnh_expiration_date && new Date(c.cnh_expiration_date + 'T00:00:00') <= thirtyDaysFromNow);
             const licensingAlerts = vehicleData.filter(v => v.licensing_expiration_date && new Date(v.licensing_expiration_date + 'T00:00:00') <= thirtyDaysFromNow);
             const totalAlerts = cnhAlerts.length + licensingAlerts.length;
+
+            // Generate notifications from alerts
+            const dynamicNotifications: NotificationItem[] = [];
+            let notificationId = 1;
+
+            cnhAlerts.forEach(client => {
+                const expirationDate = new Date(client.cnh_expiration_date! + 'T00:00:00');
+                const isExpired = expirationDate < today;
+                dynamicNotifications.push({
+                    id: notificationId++,
+                    title: `Alerta de CNH: ${client.name}`,
+                    description: `Vencimento em ${expirationDate.toLocaleDateString('pt-BR')}${isExpired ? ' (VENCIDO)' : ''}`,
+                    color: 'orange'
+                });
+            });
+
+            licensingAlerts.forEach(vehicle => {
+                const expirationDate = new Date(vehicle.licensing_expiration_date! + 'T00:00:00');
+                const isExpired = expirationDate < today;
+                dynamicNotifications.push({
+                    id: notificationId++,
+                    title: `Alerta de Licenciamento: ${vehicle.plate}`,
+                    description: `Vencimento em ${expirationDate.toLocaleDateString('pt-BR')}${isExpired ? ' (VENCIDO)' : ''}`,
+                    color: 'orange'
+                });
+            });
+
+            if (dynamicNotifications.length === 0) {
+                dynamicNotifications.push({
+                    id: 1,
+                    title: 'Tudo em ordem!',
+                    description: 'Nenhum alerta de vencimento encontrado.',
+                    color: 'green'
+                });
+            }
+            
+            setNotifications(dynamicNotifications);
 
             const updatedKpis: DashboardKpiV2[] = [
                 { ...dashboardKpisV2[0], value: String(kpiData.clientCount), subtitle: 'Clientes cadastrados', change: '' },
@@ -283,7 +326,7 @@ const Dashboard: React.FC = () => {
                 
                 <div className="space-y-8">
                     <ServicesByClientChart services={recentServicesWithDetails} loading={loading} />
-                    <AlertsAndNotifications notifications={mockNotifications} />
+                    <AlertsAndNotifications notifications={notifications} loading={loading} />
                 </div>
             </div>
         </div>
