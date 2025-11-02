@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import ClientForm from '../components/ClientForm';
 import ClientDetailsModal from '../components/ClientDetailsModal'; // Importando o novo modal
-import { PlusIcon, EditIcon, TrashIcon, MoreVerticalIcon, SearchIcon, LoaderIcon } from '../components/Icons';
+import { PlusIcon, EditIcon, TrashIcon, MoreVerticalIcon, SearchIcon, LoaderIcon, PrinterIcon } from '../components/Icons';
 import { fetchClients, createClient, updateClient, deleteClient } from '../services/supabase';
 
 const getStatusBadge = (status: ClientDocStatus) => {
@@ -63,7 +63,6 @@ const Clients: React.FC = () => {
     
     const handleOpenDetailsModal = (client: Client) => {
         setSelectedClient(client);
-        // A variável isDetailsModalOpen não é mais necessária, pois o modal é controlado por 'selectedClient'
     };
     
     const handleCloseDetailsModal = () => {
@@ -173,6 +172,9 @@ const Clients: React.FC = () => {
                                                         </a>
                                                         <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteClient(client.id, client.name); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
                                                             <TrashIcon className="w-4 h-4 mr-2" /> Excluir
+                                                        </a>
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleOpenDetailsModal(client); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                            <PrinterIcon className="w-4 h-4 mr-2" /> Imprimir
                                                         </a>
                                                     </div>
                                                 </button>
