@@ -3,10 +3,12 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import { initialPermissions, mockCompanyProfile } from '../data/mockData';
 import type { AppUser, Role, PermissionsMap, CompanyProfile, Page } from '../types';
-import { PlusIcon, EditIcon, TrashIcon, CameraIcon } from '../components/Icons';
+import { PlusIcon, EditIcon, TrashIcon, CameraIcon, MoreVerticalIcon, PrinterIcon } from '../components/Icons';
 import { createUserWithProfile, updateUserWithProfile } from '../services/supabase';
 import { supabase } from '../integrations/supabase/client';
-import UppercaseInput from '../components/ui/UppercaseInput'; // Importando o novo componente
+import UppercaseInput from '../components/ui/UppercaseInput';
+import { printComponent } from '../utils/printUtils';
+import PrintableUserDetails from '../components/PrintableUserDetails';
 
 type SettingsTab = 'users' | 'permissions' | 'company';
 
@@ -208,6 +210,10 @@ const UsersTab: React.FC = () => {
         }
     };
 
+    const handlePrintUser = (user: AppUser) => {
+        printComponent(PrintableUserDetails, { user });
+    };
+
     return (
         <div>
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
@@ -224,7 +230,7 @@ const UsersTab: React.FC = () => {
                             <th className="p-4 font-semibold">Nome</th>
                             <th className="p-4 font-semibold">E-mail</th>
                             <th className="p-4 font-semibold">Perfil</th>
-                            <th className="p-4 font-semibold">Ações</th>
+                            <th className="p-4 font-semibold text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -243,18 +249,27 @@ const UsersTab: React.FC = () => {
                                     </td>
                                     <td className="p-4">{user.email}</td>
                                     <td className="p-4">{user.role}</td>
-                                    <td className="p-4 space-x-2 flex items-center">
-                                        <button onClick={() => handleOpenModal(user)} className="text-primary p-1 hover:bg-gray-200 rounded-full">
-                                            <EditIcon className="w-4 h-4" />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteUser(user.id, user.fullName)} 
-                                            className={`p-1 rounded-full ${user.email === 'gilshikam@gmail.com' ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:bg-gray-200'}`}
-                                            disabled={user.email === 'gilshikam@gmail.com'}
-                                            title={user.email === 'gilshikam@gmail.com' ? 'Este administrador não pode ser removido.' : 'Excluir usuário'}
-                                        >
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
+                                    <td className="p-4 text-center">
+                                        <div className="relative inline-block">
+                                            <button className="p-2 hover:bg-gray-200 rounded-full group">
+                                                <MoreVerticalIcon className="w-5 h-5 text-gray-600" />
+                                                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-xl z-10 hidden group-focus-within:block">
+                                                    <a href="#" onClick={(e) => { e.preventDefault(); handleOpenModal(user); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                        <EditIcon className="w-4 h-4 mr-2" /> Editar
+                                                    </a>
+                                                    <a href="#" onClick={(e) => { e.preventDefault(); handlePrintUser(user); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                        <PrinterIcon className="w-4 h-4 mr-2" /> Imprimir
+                                                    </a>
+                                                    <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteUser(user.id, user.fullName); }} 
+                                                       className={`flex items-center px-4 py-2 text-sm ${user.email === 'gilshikam@gmail.com' ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:bg-gray-100'}`}
+                                                       style={user.email === 'gilshikam@gmail.com' ? { pointerEvents: 'none' } : {}}
+                                                       title={user.email === 'gilshikam@gmail.com' ? 'Este administrador não pode ser removido.' : 'Excluir usuário'}
+                                                    >
+                                                        <TrashIcon className="w-4 h-4 mr-2" /> Excluir
+                                                    </a>
+                                                </div>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
