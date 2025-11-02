@@ -214,10 +214,9 @@ const Dashboard: React.FC = () => {
         try {
             const user = await supabase.auth.getUser();
             if (!user.data.user) return;
-            const userId = user.data.user.id;
 
             const [kpiData, serviceData, clientData, vehicleData] = await Promise.all([
-                fetchDashboardKpis(userId),
+                fetchDashboardKpis(),
                 fetchServices(),
                 fetchClients(),
                 fetchVehicles()
@@ -251,7 +250,7 @@ const Dashboard: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [clientMap, vehicleMap]); // Adicionado dependências para useCallback
 
     useEffect(() => {
         loadDashboardData();

@@ -5,7 +5,7 @@ import type { ExtractedVehicleData } from '../types';
  * @param documentContent O conteúdo de texto do documento (por exemplo, um PDF lido).
  * @returns Uma promessa que resolve com os dados do veículo extraídos.
  */
-export const extractVehicleDataFromDocument = async (documentContent: string): Promise<ExtractedVehicleData> => {
+export const extractVehicleDataFromDocument = async (_documentContent: string): Promise<ExtractedVehicleData> => {
     console.log("Enviando conteúdo do documento para análise da IA...");
     
     // Simula um atraso de rede para a chamada da API
@@ -15,10 +15,10 @@ export const extractVehicleDataFromDocument = async (documentContent: string): P
     // O prompt real seria algo como:
     // "Extraia as seguintes informações do documento do veículo e retorne em formato JSON:
     // plate, chassis, renavam, brand, model, year_manufacture, year_model, color, fuel_type.
-    // O documento contém o seguinte texto: [documentContent]"
+    // O documento contém o seguinte texto: [_documentContent]"
 
     // --- Resposta Simulada do Gemini ---
-    // Em um cenário real, o Gemini analisaria o `documentContent` e retornaria um JSON.
+    // Em um cenário real, o Gemini analisaria o `_documentContent` e retornaria um JSON.
     // Aqui, estamos retornando um objeto mockado para fins de demonstração.
     const mockExtractedData: ExtractedVehicleData = {
         plate: 'ABC1D23',

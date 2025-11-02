@@ -273,6 +273,15 @@ export const createVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'user_id' 
     return data as Vehicle;
 };
 
+export const deleteVehicle = async (vehicleId: number): Promise<void> => {
+    const { error } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('id', vehicleId);
+
+    if (error) throw error;
+};
+
 // --- Service CRUD Operations ---
 
 export const fetchServices = async (): Promise<Service[]> => {

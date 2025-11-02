@@ -5,7 +5,8 @@ import type { ExtractedVehicleData } from '../types';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configuração do worker para o pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Usando a versão 3.4.120 que foi instalada
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
 
 interface VehicleDocumentUploadProps {
     onDataExtracted: (data: ExtractedVehicleData) => void;
@@ -43,7 +44,8 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const text = await page.getTextContent();
-                        textContent += text.items.map(item => ('str' in item ? item.str : '')).join(' ');
+                        // Tipando item para resolver TS7006
+                        textContent += text.items.map((item: { str: string }) => item.str).join(' ');
                     }
                     
                     if (!textContent.trim()) {
@@ -105,7 +107,8 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
                         <SparklesIcon className="w-5 h-5 mr-2" />
                         Preencher com IA
                     </>
-                )}
+                )
+                }
             </button>
         </>
     );

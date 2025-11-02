@@ -5,8 +5,8 @@ import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal from '../components/VehicleDetailsModal';
 import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; // Importando o novo componente
 import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
-import { PlusIcon, LoaderIcon } from '../components/Icons';
-import { fetchVehicles, createVehicle, fetchClients, deleteClient } from '../services/supabase';
+import { PlusIcon, LoaderIcon, EditIcon } from '../components/Icons';
+import { fetchVehicles, createVehicle, fetchClients, deleteVehicle } from '../services/supabase';
 
 // Helper function to determine alert status (kept local as it's UI logic)
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
@@ -67,6 +67,7 @@ const Vehicles: React.FC = () => {
             ]);
             setClients(clientData);
             
+            // Map vehicles to include ownerName for display purposes
             const vehiclesWithNames: VehicleWithOwnerName[] = vehicleData.map(v => {
                 const owner = clientData.find(c => c.id === v.owner_id);
                 return {
@@ -75,7 +76,7 @@ const Vehicles: React.FC = () => {
                 };
             });
             setVehicles(vehiclesWithNames);
-        } catch (error) => {
+        } catch (error) {
             console.error('Erro ao carregar dados:', error);
             alert('Não foi possível carregar a lista de veículos.');
         } finally {
@@ -99,7 +100,7 @@ const Vehicles: React.FC = () => {
     const handleDeleteVehicle = async (vehicleId: number, plate: string) => {
         if (window.confirm(`Tem certeza que deseja excluir o veículo de placa "${plate}"?`)) {
             try {
-                await deleteClient(vehicleId); 
+                await deleteVehicle(vehicleId); 
                 await loadData();
             } catch (error) {
                 console.error('Erro ao excluir veículo:', error);
@@ -183,6 +184,7 @@ const Vehicles: React.FC = () => {
                                         <td className="p-4 space-x-2">
                                             <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline">Detalhes</button>
                                             <button onClick={() => handleDeleteVehicle(vehicle.id, vehicle.plate)} className="text-red-500 hover:underline">Excluir</button>
+                                            <button className="text-gray-500 hover:text-primary p-1"><EditIcon className="w-4 h-4" /></button>
                                         </td>
                                     </tr>
                                 ))
