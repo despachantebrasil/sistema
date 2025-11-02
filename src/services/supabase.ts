@@ -139,12 +139,15 @@ export const fetchClients = async (): Promise<Client[]> => {
     return data as Client[];
 };
 
-export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null): Promise<Client> => {
+// O tipo de dado de entrada agora inclui doc_status, que é calculado no formulário.
+type ClientPayload = Omit<Client, 'id' | 'user_id' | 'created_at'>;
+
+export const createClient = async (clientData: ClientPayload, avatarFile: File | null): Promise<Client> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
 
-    let final_avatar_url = clientData.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=0D47A1&color=fff`;
+    let avatar_url = clientData.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=0D47A1&color=fff`;
 
     if (avatarFile) {
         const filePath = `${userId}/clients/${Date.now()}_${avatarFile.name}`;
@@ -158,16 +161,16 @@ export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | '
             const { data: { publicUrl } } = supabase.storage
                 .from('avatars')
                 .getPublicUrl(filePath);
-            final_avatar_url = publicUrl;
+            avatar_url = publicUrl;
         }
     }
 
-    // Explicitamente construir o payload para garantir que todos os campos, incluindo doc_status, sejam incluídos.
     const payload = {
         ...clientData,
         user_id: userId,
-        avatar_url: final_avatar_url,
-        doc_status: clientData.doc_status // Garantir que o status calculado no formulário seja enviado
+        // Usamos o doc_status calculado no formulário, não sobrescrevemos para PENDING
+        doc_status: clientData.doc_status, 
+        avatar_url,
     };
 
     const { data, error } = await supabase
@@ -180,12 +183,12 @@ export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | '
     return data as Client;
 };
 
-export const updateClient = async (clientId: number, clientData: Partial<Omit<Client, 'user_id' | 'created_at'>>, avatarFile: File | null): Promise<Client> => {
+export const updateClient = async (clientId: number, clientData: Partial<ClientPayload>, avatarFile: File | null): Promise<Client> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
 
-    const payload: Partial<Client> = { ...clientData };
+    let avatar_url = clientData.avatar_url;
 
     if (avatarFile) {
         const filePath = `${userId}/clients/${Date.now()}_${avatarFile.name}`;
@@ -197,14 +200,11 @@ export const updateClient = async (clientId: number, clientData: Partial<Omit<Cl
             console.error('Erro ao fazer upload do novo avatar do cliente:', uploadError);
         } else {
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-            payload.avatar_url = publicUrl;
+            avatar_url = publicUrl;
         }
     }
-    
-    // Garantir que o doc_status do formulário esteja no payload de atualização
-    if (clientData.doc_status) {
-        payload.doc_status = clientData.doc_status;
-    }
+
+    const payload: Partial<ClientPayload> = { ...clientData, avatar_url };
 
     const { data, error } = await supabase
         .from('clients')
@@ -298,7 +298,7 @@ export const fetchServices = async (): Promise<Service[]> => {
     return data as Service[];
 };
 
-export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' | 'created_at'>): Promise<Service> => {
+export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' | 'created_at' | 'status'>): Promise<Service> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
@@ -408,6 +408,8 @@ export const fetchDashboardKpis = async () => {
     const totalRevenue = revenueData.reduce((sum, t) => sum + t.amount, 0);
 
     // 4. Pending Alerts (CNH/Licensing expiring soon or expired)
+    // This requires fetching all clients and vehicles to calculate alerts on the client side, 
+    // as complex date logic is easier in JS than in a single Supabase query.
     const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select('id, name, cnh_expiration_date');
@@ -418,8 +420,12 @@ export const fetchDashboardKpis = async () => {
 
     if (clientsError || vehiclesError) {
         console.error("Error fetching data for alerts:", clientsError || vehiclesError);
+        // Continue with 0 alerts if fetching fails
     }
     
+    // The actual alert calculation logic will remain in the Header component for now, 
+    // but we return the raw data needed for it.
+
     return {
         clientCount: clientCount || 0,
         activeServiceCount: activeServiceCount || 0,

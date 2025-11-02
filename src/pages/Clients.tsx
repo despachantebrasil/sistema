@@ -60,7 +60,7 @@ const Clients: React.FC = () => {
     };
 
     // Corrigido o tipo de clientData para incluir doc_status, conforme retornado pelo ClientForm
-    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'> & { doc_status: ClientDocStatus }, avatarFile: File | null) => {
+    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null) => {
         try {
             if (editingClient) {
                 await updateClient(editingClient.id, clientData, avatarFile);

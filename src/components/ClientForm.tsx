@@ -3,8 +3,11 @@ import type { Client } from '../types';
 import { ClientType, ClientDocStatus } from '../types';
 import { CameraIcon } from './Icons';
 
+// Definindo o tipo de dados que o formulário retorna, que inclui o doc_status calculado
+type ClientDataToSave = Omit<Client, 'id' | 'user_id' | 'created_at'>;
+
 interface ClientFormProps {
-    onSave: (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null) => Promise<void>;
+    onSave: (clientData: ClientDataToSave, avatarFile: File | null) => Promise<void>;
     onCancel: () => void;
     client?: Client; // For editing
 }
@@ -121,12 +124,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         try {
             const newDocStatus = checkDocumentationStatus(formData, clientType);
             
-            const clientDataToSave: Omit<Client, 'id' | 'user_id' | 'created_at'> = {
+            const clientDataToSave: ClientDataToSave = {
                 ...formData,
                 client_type: clientType,
                 doc_status: newDocStatus, // Adicionando o status calculado
                 avatar_url: avatarFile ? undefined : formData.avatar_url,
-            } as Omit<Client, 'id' | 'user_id' | 'created_at'>;
+            } as ClientDataToSave;
             
             await onSave(clientDataToSave, avatarFile);
             
