@@ -5,7 +5,8 @@ import type { ExtractedVehicleData } from '../types';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configuração do worker para o pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Usando uma URL absoluta do CDN para garantir que o worker seja carregado corretamente.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface VehicleDocumentUploadProps {
     onDataExtracted: (data: ExtractedVehicleData) => void;
@@ -29,22 +30,25 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
         try {
             const fileReader = new FileReader();
             fileReader.onload = async (e) => {
-                if (!e.target?.result) {
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                if (!arrayBuffer) {
                     onError('Não foi possível ler o arquivo.');
                     setIsLoading(false);
                     return;
                 }
 
                 try {
-                    const typedarray = new Uint8Array(e.target.result as ArrayBuffer);
-                    const pdf = await (pdfjsLib as any).getDocument(typedarray).promise;
+                    const typedarray = new Uint8Array(arrayBuffer);
+                    
+                    // Usando a função getDocument diretamente do pdfjsLib
+                    const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
                     let textContent = '';
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const text = await page.getTextContent();
                         
-                        // Corrigido: Mapear apenas itens que possuem a propriedade 'str' (TextItem)
+                        // Mapear apenas itens que possuem a propriedade 'str' (TextItem)
                         textContent += text.items.map((item: any) => ('str' in item ? item.str : '')).join(' ');
                     }
                     
@@ -54,12 +58,12 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
                         return;
                     }
 
-                    const extractedData = await extractVehicleDataFromDocument(textContent); // Passando textContent
+                    const extractedData = await extractVehicleDataFromDocument(textContent);
                     onDataExtracted(extractedData);
 
                 } catch (pdfError) {
                     console.error("Erro ao processar PDF:", pdfError);
-                    onError('Ocorreu um erro ao processar o arquivo PDF.');
+                    onError('Ocorreu um erro ao processar o arquivo PDF. Verifique se o PDF é legível.');
                 } finally {
                     setIsLoading(false);
                 }
