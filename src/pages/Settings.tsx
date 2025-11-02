@@ -9,6 +9,7 @@ import { supabase } from '../integrations/supabase/client';
 import UppercaseInput from '../components/ui/UppercaseInput';
 import { printComponent } from '../utils/printUtils';
 import PrintableUserDetails from '../components/PrintableUserDetails';
+import PasswordInput from '../components/ui/PasswordInput'; // Importando o novo componente
 
 type SettingsTab = 'users' | 'permissions' | 'company';
 
@@ -125,7 +126,13 @@ const UserForm: React.FC<{
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Senha</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={editingUser ? "Deixe em branco para não alterar" : ""} className={inputClasses} minLength={editingUser ? undefined : 6} />
+                <PasswordInput 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    placeholder={editingUser ? "Deixe em branco para não alterar" : ""} 
+                    minLength={editingUser ? undefined : 6}
+                    required={!editingUser}
+                />
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Perfil de Acesso</label>
