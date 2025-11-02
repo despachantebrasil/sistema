@@ -124,7 +124,7 @@ const Clients: React.FC = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[800px]">
+                    <table className="w-full text-left min-w-[900px]">
                         <thead>
                             <tr className="border-b bg-gray-50">
                                 <th className="p-4 font-semibold">Nome / Razão Social</th>
@@ -132,14 +132,15 @@ const Clients: React.FC = () => {
                                 <th className="p-4 font-semibold">Contato</th>
                                 <th className="p-4 font-semibold">CPF/CNPJ</th>
                                 <th className="p-4 font-semibold">Status Doc.</th>
+                                <th className="p-4 font-semibold text-center">Imprimir</th> {/* NOVA COLUNA */}
                                 <th className="p-4 font-semibold text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={6} className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando clientes...</td></tr>
+                                <tr><td colSpan={7} className="text-center p-8"><LoaderIcon className="w-6 h-6 inline mr-2" /> Carregando clientes...</td></tr>
                             ) : filteredClients.length === 0 ? (
-                                <tr><td colSpan={6} className="text-center p-8 text-gray-500">Nenhum cliente encontrado.</td></tr>
+                                <tr><td colSpan={7} className="text-center p-8 text-gray-500">Nenhum cliente encontrado.</td></tr>
                             ) : (
                                 filteredClients.map(client => (
                                     <tr key={client.id} className="border-b hover:bg-gray-50">
@@ -166,6 +167,18 @@ const Clients: React.FC = () => {
                                         </td>
                                         <td className="p-4 text-sm">{client.cpf_cnpj}</td>
                                         <td className="p-4">{getStatusBadge(client.doc_status)}</td>
+                                        
+                                        {/* NOVA CÉLULA DE IMPRESSÃO */}
+                                        <td className="p-4 text-center">
+                                            <button 
+                                                onClick={() => handlePrintClient(client)} 
+                                                className="text-gray-600 p-2 hover:bg-gray-200 rounded-full"
+                                                title="Imprimir Cadastro"
+                                            >
+                                                <PrinterIcon className="w-5 h-5" />
+                                            </button>
+                                        </td>
+                                        
                                         <td className="p-4 text-center">
                                             <div className="relative inline-block">
                                                 <button onClick={() => handleOpenDetailsModal(client)} className="text-primary hover:underline mr-2">Detalhes</button>
@@ -177,9 +190,6 @@ const Clients: React.FC = () => {
                                                         </a>
                                                         <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteClient(client.id, client.name); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
                                                             <TrashIcon className="w-4 h-4 mr-2" /> Excluir
-                                                        </a>
-                                                        <a href="#" onClick={(e) => { e.preventDefault(); handlePrintClient(client); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                                            <PrinterIcon className="w-4 h-4 mr-2" /> Imprimir
                                                         </a>
                                                     </div>
                                                 </button>

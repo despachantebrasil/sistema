@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import type { Client } from '../types';
 import { ClientType } from '../types';
 import Modal from './ui/Modal';
