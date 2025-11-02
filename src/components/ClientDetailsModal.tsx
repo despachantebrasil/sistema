@@ -2,11 +2,12 @@ import React, { useRef } from 'react';
 import type { Client } from '../types';
 import { ClientType } from '../types';
 import Modal from './ui/Modal';
-import { PrinterIcon } from './Icons'; // Corrigido o import
+import { PrinterIcon } from './Icons';
 
 interface ClientDetailsModalProps {
   client: Client | null;
   onClose: () => void;
+  onPrint: (client: Client) => void; // Adicionando prop para chamar a impressão externa
 }
 
 interface DetailItemProps {
@@ -22,8 +23,8 @@ const DetailItem: React.FC<DetailItemProps> = ({ label, value, uppercase = false
   </div>
 );
 
-// Componente otimizado para impressão
-const PrintableClientDetails: React.FC<{ client: Client }> = ({ client }) => {
+// Componente otimizado para impressão (AGORA EXPORTADO)
+export const PrintableClientDetails: React.FC<{ client: Client }> = ({ client }) => {
     const isIndividual = client.client_type === ClientType.INDIVIDUAL;
     const avatarUrl = client.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(client.name)}&background=0D47A1&color=fff`;
     
@@ -78,36 +79,17 @@ const PrintableClientDetails: React.FC<{ client: Client }> = ({ client }) => {
     );
 };
 
-const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ client, onClose }) => {
-  const printRef = useRef<HTMLDivElement>(null);
-
+const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({ client, onClose, onPrint }) => {
   if (!client) return null;
-
-  const handlePrint = () => {
-    const content = printRef.current;
-    if (content) {
-        // Temporariamente move o conteúdo para o container de impressão global
-        const reportContainer = document.getElementById('report-content');
-        if (reportContainer) {
-            reportContainer.innerHTML = '';
-            reportContainer.appendChild(content.cloneNode(true));
-            window.print();
-            // O conteúdo original do modal permanece no DOM, mas o conteúdo de impressão é limpo após o print
-            reportContainer.innerHTML = '';
-        }
-    }
-  };
 
   return (
     <Modal isOpen={!!client} onClose={onClose} title={`Detalhes do Cliente: ${client.name}`}>
-        {/* O conteúdo do modal é renderizado aqui e referenciado para impressão */}
-        <div ref={printRef}>
-            <PrintableClientDetails client={client} />
-        </div>
+        {/* O conteúdo do modal é renderizado aqui */}
+        <PrintableClientDetails client={client} />
 
         <div className="flex justify-end space-x-3 pt-4 border-t mt-6 no-print">
             <button 
-                onClick={handlePrint} 
+                onClick={() => onPrint(client)} // Chama a função de impressão passada por prop
                 className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
             >
                 <PrinterIcon className="w-5 h-5 mr-2" />

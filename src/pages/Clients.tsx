@@ -4,9 +4,10 @@ import { ClientDocStatus, ClientType } from '../types';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import ClientForm from '../components/ClientForm';
-import ClientDetailsModal from '../components/ClientDetailsModal'; // Importando o novo modal
+import ClientDetailsModal, { PrintableClientDetails } from '../components/ClientDetailsModal'; // Importando PrintableClientDetails
 import { PlusIcon, EditIcon, TrashIcon, MoreVerticalIcon, SearchIcon, LoaderIcon, PrinterIcon } from '../components/Icons';
 import { fetchClients, createClient, updateClient, deleteClient } from '../services/supabase';
+import { printComponent } from '../utils/printUtils'; // Importando o utilitário de impressão
 
 const getStatusBadge = (status: ClientDocStatus) => {
     const statusMap: Record<ClientDocStatus, { text: string; className: string }> = {
@@ -67,6 +68,10 @@ const Clients: React.FC = () => {
     
     const handleCloseDetailsModal = () => {
         setSelectedClient(null);
+    };
+
+    const handlePrintClient = (client: Client) => {
+        printComponent(PrintableClientDetails, { client });
     };
 
     // Corrigido o tipo de clientData para incluir doc_status, conforme retornado pelo ClientForm
@@ -173,7 +178,7 @@ const Clients: React.FC = () => {
                                                         <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteClient(client.id, client.name); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
                                                             <TrashIcon className="w-4 h-4 mr-2" /> Excluir
                                                         </a>
-                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleOpenDetailsModal(client); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handlePrintClient(client); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                             <PrinterIcon className="w-4 h-4 mr-2" /> Imprimir
                                                         </a>
                                                     </div>
@@ -199,6 +204,7 @@ const Clients: React.FC = () => {
             <ClientDetailsModal 
                 client={selectedClient} 
                 onClose={handleCloseDetailsModal} 
+                onPrint={handlePrintClient}
             />
         </div>
     );
