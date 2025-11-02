@@ -116,7 +116,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
-            {/* Seção 1: Identificação Principal */}
+            {/* Seção 1: Identificação Principal (3 colunas) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="plate" className="block text-sm font-medium text-gray-700">Placa</label>
@@ -137,12 +137,13 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
             
+            {/* Chassi (1 coluna) */}
             <div>
                 <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
                 <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required />
             </div>
 
-            {/* Seção 2: Características do Veículo */}
+            {/* Seção 2: Características do Veículo (2 colunas) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Marca</label>
@@ -154,6 +155,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
 
+            {/* Seção 3: Detalhes (4 colunas) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <label htmlFor="year_manufacture" className="block text-sm font-medium text-gray-700">Ano Fab.</label>
@@ -176,6 +178,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
             
+            {/* Seção 4: Categoria e Capacidade (2 colunas) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoria</label>
@@ -186,11 +189,11 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
                 <div>
                     <label htmlFor="capacity_power_cc" className="block text-sm font-medium text-gray-700">Capacidade/Potência/Cilindrada</label>
-                    <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="Ex: 5 PES / 100 CV / 1000 CC" />
+                    <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="EX: 5 PES / 100 CV / 1000 CC" />
                 </div>
             </div>
 
-            {/* Seção 3: Documentação e Mídia */}
+            {/* Seção 5: Documentação e Mídia (1 coluna) */}
             <div>
                 <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
                 <input type="date" name="licensing_expiration_date" id="licensing_expiration_date" value={formData.licensing_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
