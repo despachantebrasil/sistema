@@ -178,7 +178,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
             
-            {/* Seção 4: Categoria e Capacidade (3 colunas, usando a terceira para Vencimento Licenciamento) */}
+            {/* Seção 4: Categoria e Potência/Cilindrada (3 colunas) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoria</label>
@@ -188,8 +188,8 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="capacity_power_cc" className="block text-sm font-medium text-gray-700">Capacidade/Potência/Cilindrada</label>
-                    <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="EX: 5 PES / 100 CV / 1000 CC" />
+                    <label htmlFor="capacity_power_cc" className="block text-sm font-medium text-gray-700">Potência/Cilindrada</label>
+                    <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="EX: 100 CV / 1000 CC" />
                 </div>
                 <div>
                     <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>

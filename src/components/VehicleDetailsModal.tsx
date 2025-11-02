@@ -47,7 +47,7 @@ const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onCl
           <DetailItem label="RENAVAM" value={vehicle.renavam} />
           <DetailItem label="Categoria" value={vehicle.category} />
           
-          <DetailItem label="Capacidade/Potência/CC" value={vehicle.capacity_power_cc} />
+          <DetailItem label="Potência/Cilindrada" value={vehicle.capacity_power_cc} />
         </div>
 
         <div>
