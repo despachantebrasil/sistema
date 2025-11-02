@@ -1,6 +1,6 @@
 import { supabase } from '../integrations/supabase/client';
 import type { AppUser, Role, Client, Vehicle, Service, Transaction } from '../types';
-import { ClientDocStatus, ServiceStatus, TransactionType, TransactionStatus } from '../types';
+import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
 
 // --- Auth & User Management Functions ---
 
@@ -139,13 +139,12 @@ export const fetchClients = async (): Promise<Client[]> => {
     return data as Client[];
 };
 
-// Atualizado para aceitar doc_status no payload
-export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'> & { doc_status: ClientDocStatus }, avatarFile: File | null): Promise<Client> => {
+export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null): Promise<Client> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
 
-    let avatar_url = `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=0D47A1&color=fff`;
+    let final_avatar_url = clientData.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=0D47A1&color=fff`;
 
     if (avatarFile) {
         const filePath = `${userId}/clients/${Date.now()}_${avatarFile.name}`;
@@ -159,14 +158,16 @@ export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | '
             const { data: { publicUrl } } = supabase.storage
                 .from('avatars')
                 .getPublicUrl(filePath);
-            avatar_url = publicUrl;
+            final_avatar_url = publicUrl;
         }
     }
 
+    // Explicitamente construir o payload para garantir que todos os campos, incluindo doc_status, sejam incluídos.
     const payload = {
         ...clientData,
         user_id: userId,
-        avatar_url,
+        avatar_url: final_avatar_url,
+        doc_status: clientData.doc_status // Garantir que o status calculado no formulário seja enviado
     };
 
     const { data, error } = await supabase
@@ -179,13 +180,12 @@ export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | '
     return data as Client;
 };
 
-// Atualizado para aceitar doc_status no payload
-export const updateClient = async (clientId: number, clientData: Partial<Omit<Client, 'user_id' | 'created_at'>> & { doc_status?: ClientDocStatus }, avatarFile: File | null): Promise<Client> => {
+export const updateClient = async (clientId: number, clientData: Partial<Omit<Client, 'user_id' | 'created_at'>>, avatarFile: File | null): Promise<Client> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
 
-    let avatar_url = clientData.avatar_url;
+    const payload: Partial<Client> = { ...clientData };
 
     if (avatarFile) {
         const filePath = `${userId}/clients/${Date.now()}_${avatarFile.name}`;
@@ -197,11 +197,14 @@ export const updateClient = async (clientId: number, clientData: Partial<Omit<Cl
             console.error('Erro ao fazer upload do novo avatar do cliente:', uploadError);
         } else {
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-            avatar_url = publicUrl;
+            payload.avatar_url = publicUrl;
         }
     }
-
-    const payload = { ...clientData, avatar_url };
+    
+    // Garantir que o doc_status do formulário esteja no payload de atualização
+    if (clientData.doc_status) {
+        payload.doc_status = clientData.doc_status;
+    }
 
     const { data, error } = await supabase
         .from('clients')
