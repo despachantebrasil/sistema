@@ -6,7 +6,7 @@ import VehicleDetailsModal, { PrintableVehicleDetails } from '../components/Vehi
 import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; 
 import VehicleTransferModal from '../components/VehicleTransferModal'; // Importando o novo modal
 import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
-import { PlusIcon, LoaderIcon, EditIcon, TrashIcon, MoreVerticalIcon, PrinterIcon } from '../components/Icons'; // Adicionar ícone de transferência se necessário
+import { PlusIcon, LoaderIcon } from '../components/Icons'; // Adicionar ícone de transferência se necessário
 import { fetchVehicles, createVehicle, fetchClients, deleteVehicle, transferVehicle } from '../services/supabase'; // Importando a nova função
 import { printComponent } from '../utils/printUtils';
 
@@ -115,10 +115,10 @@ const Vehicles: React.FC = () => {
         setIsTransferModalOpen(true);
     };
 
-    const handleConfirmTransfer = async (newOwnerId: number, price: number, dueDate: string, payerId: number) => {
+    const handleConfirmTransfer = async (newOwnerId: number, price: number, dueDate: string, payerId: number, agentName: string) => {
         if (!vehicleToTransfer) return;
         try {
-            await transferVehicle(vehicleToTransfer, newOwnerId, price, dueDate, payerId);
+            await transferVehicle(vehicleToTransfer, newOwnerId, price, dueDate, payerId, agentName);
             setIsTransferModalOpen(false);
             setVehicleToTransfer(null);
             await loadData();
@@ -204,26 +204,10 @@ const Vehicles: React.FC = () => {
                                             <ExpirationDate date={vehicle.licensing_expiration_date} />
                                         </td>
                                         <td className="p-4 text-center">
-                                            <div className="relative inline-block">
-                                                <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline mr-2">Detalhes</button>
-                                                <button className="p-2 hover:bg-gray-200 rounded-full group">
-                                                    <MoreVerticalIcon className="w-5 h-5 text-gray-600" />
-                                                    <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-xl z-10 hidden group-focus-within:block">
-                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleOpenTransferModal(vehicle); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                                            {/* Ícone de transferência pode ser adicionado aqui */}
-                                                            Transferir
-                                                        </a>
-                                                        <a href="#" onClick={(e) => { e.preventDefault(); /* Lógica de editar aqui */ }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                                            <EditIcon className="w-4 h-4 mr-2" /> Editar
-                                                        </a>
-                                                        <a href="#" onClick={(e) => { e.preventDefault(); handlePrintVehicle(vehicle); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                                            <PrinterIcon className="w-4 h-4 mr-2" /> Imprimir
-                                                        </a>
-                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteVehicle(vehicle.id, vehicle.plate); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
-                                                            <TrashIcon className="w-4 h-4 mr-2" /> Excluir
-                                                        </a>
-                                                    </div>
-                                                </button>
+                                            <div className="flex items-center justify-center space-x-4">
+                                                <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline font-semibold text-sm">Detalhes</button>
+                                                <button onClick={() => handleOpenTransferModal(vehicle)} className="text-green-600 hover:underline font-semibold text-sm">→ Transferir</button>
+                                                <button onClick={() => handleDeleteVehicle(vehicle.id, vehicle.plate)} className="text-red-600 hover:underline font-semibold text-sm">Excluir</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -250,7 +234,7 @@ const Vehicles: React.FC = () => {
             </Modal>
 
             {vehicleToTransfer && (
-                <Modal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} title="Transferir Veículo">
+                <Modal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} title={`Transferir Veículo ${vehicleToTransfer.plate}`}>
                     <VehicleTransferModal
                         vehicle={vehicleToTransfer}
                         clients={clients}

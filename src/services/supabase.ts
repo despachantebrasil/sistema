@@ -342,7 +342,8 @@ export const transferVehicle = async (
     newOwnerId: number,
     price: number,
     dueDate: string,
-    payerId: number
+    payerId: number,
+    agentName: string
 ): Promise<void> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
@@ -368,9 +369,10 @@ export const transferVehicle = async (
     if (serviceError) throw serviceError;
 
     // 2. Create the financial transaction
+    const transactionDescription = `Serviço: Transferência de Propriedade - ${vehicle.plate}${agentName ? ` (Resp: ${agentName})` : ''}`;
     const transactionPayload = {
         user_id: userId,
-        description: `Serviço: Transferência de Propriedade - ${vehicle.plate}`,
+        description: transactionDescription,
         category: 'Receita de Serviço',
         transaction_date: new Date().toISOString().split('T')[0],
         amount: price,
@@ -400,6 +402,7 @@ export const transferVehicle = async (
         from_owner_id: vehicle.owner_id,
         to_owner_id: newOwnerId,
         service_id: newService.id,
+        agent: agentName,
     });
 };
 
