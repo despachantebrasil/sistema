@@ -143,8 +143,8 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required />
             </div>
 
-            {/* Seção 2: Características do Veículo (2 colunas) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Seção 2: Características do Veículo (3 colunas) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Marca</label>
                     <UppercaseInput type="text" name="brand" id="brand" value={formData.brand} onChange={handleChange} required />
@@ -153,10 +153,14 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                     <label htmlFor="model" className="block text-sm font-medium text-gray-700">Modelo</label>
                     <UppercaseInput type="text" name="model" id="model" value={formData.model} onChange={handleChange} required />
                 </div>
+                <div>
+                    <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor Predominante</label>
+                    <UppercaseInput type="text" name="color" id="color" value={formData.color} onChange={handleChange} required />
+                </div>
             </div>
 
-            {/* Seção 3: Detalhes (4 colunas) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Seção 3: Detalhes Técnicos (3 colunas) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="year_manufacture" className="block text-sm font-medium text-gray-700">Ano Fab.</label>
                     <input type="number" name="year_manufacture" id="year_manufacture" value={formData.year_manufacture} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
@@ -164,10 +168,6 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 <div>
                     <label htmlFor="year_model" className="block text-sm font-medium text-gray-700">Ano Mod.</label>
                     <input type="number" name="year_model" id="year_model" value={formData.year_model} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-                </div>
-                <div>
-                    <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor Predominante</label>
-                    <UppercaseInput type="text" name="color" id="color" value={formData.color} onChange={handleChange} required />
                 </div>
                 <div>
                     <label htmlFor="fuel_type" className="block text-sm font-medium text-gray-700">Combustível</label>
@@ -178,8 +178,8 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
             
-            {/* Seção 4: Categoria e Capacidade (2 colunas) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Seção 4: Categoria e Capacidade (3 colunas, usando a terceira para Vencimento Licenciamento) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoria</label>
                     <select id="category" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
@@ -191,14 +191,13 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                     <label htmlFor="capacity_power_cc" className="block text-sm font-medium text-gray-700">Capacidade/Potência/Cilindrada</label>
                     <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="EX: 5 PES / 100 CV / 1000 CC" />
                 </div>
+                <div>
+                    <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
+                    <input type="date" name="licensing_expiration_date" id="licensing_expiration_date" value={formData.licensing_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                </div>
             </div>
 
-            {/* Seção 5: Documentação e Mídia (1 coluna) */}
-            <div>
-                <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
-                <input type="date" name="licensing_expiration_date" id="licensing_expiration_date" value={formData.licensing_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
-            </div>
-
+            {/* Seção 5: Mídia */}
             <div>
                 <label className="block text-sm font-medium text-gray-700">Fotos do Veículo (até 4)</label>
                 {imagePreviews.length < 4 && (
