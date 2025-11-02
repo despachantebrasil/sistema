@@ -8,6 +8,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const GOD_USER_EMAIL = 'gilshikam@gmail.com';
+
 serve(async (req) => {
   // Responde a requisições OPTIONS (pre-flight) para CORS
   if (req.method === 'OPTIONS') {
@@ -42,7 +44,7 @@ serve(async (req) => {
     }
 
     // Verifica se o usuário é o administrador protegido
-    if (user && user.email === 'gilshikam@gmail.com') {
+    if (user && user.email === GOD_USER_EMAIL) {
         return new Response(JSON.stringify({ error: 'Este administrador não pode ser removido.' }), {
             status: 403, // Forbidden
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

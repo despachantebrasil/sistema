@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import { decode } from 'https://deno.land/x/djwt@v2.8/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,8 +25,38 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    
+    // --- 1. Proteção do Usuário Deus ---
+    const authHeader = req.headers.get('Authorization')
+    let callerId = null;
+    let callerEmail = null;
 
-    // 1. Atualiza os dados de autenticação (e-mail, senha e metadados)
+    if (authHeader) {
+        const token = authHeader.replace('Bearer ', '');
+        // Decodifica o JWT para obter o ID e email do usuário que está chamando a função
+        const [header, payload, signature] = decode(token);
+        callerId = payload.sub;
+        callerEmail = payload.email;
+    }
+    
+    // Busca o email do usuário alvo (user_id)
+    const { data: { user: targetUser }, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(user_id);
+    
+    if (targetUserError) throw targetUserError;
+
+    const GOD_USER_EMAIL = 'gilshikam@gmail.com';
+
+    // Se o usuário alvo for o Deus do Sistema, apenas ele pode se alterar
+    if (targetUser && targetUser.email === GOD_USER_EMAIL && callerId !== user_id) {
+        return new Response(JSON.stringify({ error: 'Apenas o próprio usuário pode alterar os dados deste administrador.' }), {
+            status: 403, // Forbidden
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+    // --- Fim da Proteção ---
+
+
+    // 2. Atualiza os dados de autenticação (e-mail, senha e metadados)
     const authUpdatePayload: any = {};
     if (email) authUpdatePayload.email = email;
     if (password) authUpdatePayload.password = password;
@@ -38,7 +69,7 @@ serve(async (req) => {
         if (authError) throw authError;
     }
 
-    // 2. Atualiza a tabela de perfis, dividindo o nome completo
+    // 3. Atualiza a tabela de perfis, dividindo o nome completo
     const profileUpdatePayload: any = {};
     if (full_name) {
         const nameParts = full_name.trim().split(/\s+/);
@@ -56,7 +87,7 @@ serve(async (req) => {
         if (profileError) throw profileError;
     }
 
-    // 3. Busca e retorna o perfil atualizado para a UI
+    // 4. Busca e retorna o perfil atualizado para a UI
     const { data: updatedProfile, error: fetchError } = await supabaseAdmin
         .from('user_profiles_view')
         .select('id, full_name, role, email, avatar_url')
