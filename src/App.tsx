@@ -1,7 +1,8 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import type { Page, Role } from './types';
+import { supabase } from './integrations/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 
 // Lazy loading dos componentes de páginas
@@ -12,52 +13,70 @@ const Services = lazy(() => import('./pages/Services'));
 const Financial = lazy(() => import('./pages/Financial'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Login = lazy(() => import('./pages/Login'));
 
 const App: React.FC = () => {
-  // Mock session object to bypass login.
-  // This provides the necessary structure for components like the Header.
-  const mockSession = {
-    access_token: 'mock-token',
-    token_type: 'bearer',
-    user: {
-      id: 'mock-user-id',
-      app_metadata: { provider: 'email' },
-      user_metadata: {
-        full_name: 'Admin',
-        role: 'Administrador',
-      },
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-    },
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
-    expires_in: 3600,
-    refresh_token: 'mock-refresh-token',
-  } as Session;
-
-  const [session] = useState<Session | null>(mockSession);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
-  const [userRole] = useState<Role>('Administrador'); // Default to Admin for full access
-  const [userAvatarUrl] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<Role>('Usuário');
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setLoading(false);
+    };
+
+    getSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        // Clear user-specific state on logout
+        setUserRole('Usuário');
+        setUserAvatarUrl(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role, avatar_url')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+        } else if (data) {
+          setUserRole(data.role as Role);
+          setUserAvatarUrl(data.avatar_url);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [session]);
 
   const renderContent = () => {
     switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'clients':
-        return <Clients />;
-      case 'vehicles':
-        return <Vehicles />;
-      case 'services':
-        return <Services />;
-      case 'financial':
-        return <Financial />;
-      case 'reports':
-        return <Reports />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
+      case 'dashboard': return <Dashboard />;
+      case 'clients': return <Clients />;
+      case 'vehicles': return <Vehicles />;
+      case 'services': return <Services />;
+      case 'financial': return <Financial />;
+      case 'reports': return <Reports />;
+      case 'settings': return <Settings />;
+      default: return <Dashboard />;
     }
   };
   
@@ -69,10 +88,19 @@ const App: React.FC = () => {
       financial: 'Financeiro',
       reports: 'Relatórios',
       settings: 'Configurações'
+  };
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Carregando...</div>;
   }
 
-  // The loading and session checks are removed to bypass login.
-  // The app now renders directly into the main layout.
+  if (!session) {
+    return (
+      <Suspense fallback={<div className="flex h-screen items-center justify-center">Carregando...</div>}>
+        <Login />
+      </Suspense>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-light-bg text-dark-text">
@@ -92,7 +120,7 @@ const App: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden no-print">
         <Header 
           title={pageTitles[currentPage]} 
-          session={session!} // We can use non-null assertion because session is mocked
+          session={session}
           onMenuClick={() => setIsSidebarOpen(true)}
           avatarUrl={userAvatarUrl}
         />
