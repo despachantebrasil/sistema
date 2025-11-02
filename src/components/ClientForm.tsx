@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Client } from '../types';
 import { ClientType, ClientDocStatus } from '../types';
 import { CameraIcon } from './Icons';
+import UppercaseInput from './ui/UppercaseInput'; // Importando o novo componente
 
 // Definindo o tipo de dados que o formulário retorna, que inclui o doc_status calculado
 type ClientDataToSave = Omit<Client, 'id' | 'user_id' | 'created_at'>;
@@ -180,18 +181,18 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
 
              <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'}</label>
-                <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                <UppercaseInput type="text" name="name" id="name" value={formData.name} onChange={handleChange} required />
             </div>
 
             {clientType === ClientType.COMPANY && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="trade_name" className="block text-sm font-medium text-gray-700">Nome Fantasia</label>
-                        <input type="text" name="trade_name" id="trade_name" value={formData.trade_name} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        <UppercaseInput type="text" name="trade_name" id="trade_name" value={formData.trade_name} onChange={handleChange} />
                     </div>
                     <div>
                         <label htmlFor="contact_name" className="block text-sm font-medium text-gray-700">Nome do Contato</label>
-                        <input type="text" name="contact_name" id="contact_name" value={formData.contact_name} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        <UppercaseInput type="text" name="contact_name" id="contact_name" value={formData.contact_name} onChange={handleChange} />
                     </div>
                 </div>
             )}
@@ -199,11 +200,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail</label>
+                    {/* Email não deve ser forçado a maiúsculas */}
                     <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone</label>
-                    <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <UppercaseInput type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} required />
                 </div>
             </div>
 
@@ -219,18 +221,18 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                         </div>
                         <div>
                             <label htmlFor="profession" className="block text-sm font-medium text-gray-700">Profissão</label>
-                            <input type="text" name="profession" id="profession" value={formData.profession} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                            <UppercaseInput type="text" name="profession" id="profession" value={formData.profession} onChange={handleChange} />
                         </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="nationality" className="block text-sm font-medium text-gray-700">Nacionalidade</label>
-                            <input type="text" name="nationality" id="nationality" value={formData.nationality} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                            <UppercaseInput type="text" name="nationality" id="nationality" value={formData.nationality} onChange={handleChange} />
                         </div>
                          <div>
                             <label htmlFor="naturalness" className="block text-sm font-medium text-gray-700">Naturalidade</label>
-                            <input type="text" name="naturalness" id="naturalness" value={formData.naturalness} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                            <UppercaseInput type="text" name="naturalness" id="naturalness" value={formData.naturalness} onChange={handleChange} />
                         </div>
                     </div>
                     <div>
@@ -242,12 +244,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             
              <div>
                 <label htmlFor="address" className="block text-sm font-medium text-gray-700">Endereço</label>
-                <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                <UppercaseInput type="text" name="address" id="address" value={formData.address} onChange={handleChange} />
             </div>
 
             <div>
                 <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'}</label>
-                <input type="text" name="cpf_cnpj" id="cpf_cnpj" value={formData.cpf_cnpj} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                <UppercaseInput type="text" name="cpf_cnpj" id="cpf_cnpj" value={formData.cpf_cnpj} onChange={handleChange} />
             </div>
 
             <div className="flex justify-end space-x-3 pt-4 border-t mt-6">

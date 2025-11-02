@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Transaction } from '../types';
 import { TransactionType, TransactionStatus } from '../types';
+import UppercaseInput from './ui/UppercaseInput'; // Importando o novo componente
 
 interface TransactionFormProps {
     onSave: (transaction: Omit<Transaction, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
@@ -79,7 +80,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSave, onCancel, tra
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700">Descrição</label>
-                <input type="text" name="description" id="description" value={formData.description} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                <UppercaseInput type="text" name="description" id="description" value={formData.description} onChange={handleChange} required disabled={isLoading} />
             </div>
             <div className="grid grid-cols-2 gap-4">
                  <div>
@@ -88,7 +89,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSave, onCancel, tra
                 </div>
                 <div>
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoria</label>
-                    <input type="text" name="category" id="category" value={formData.category} onChange={handleChange} placeholder="Ex: Taxas, Serviço CNH" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                    <UppercaseInput type="text" name="category" id="category" value={formData.category} onChange={handleChange} placeholder="Ex: TAXAS, SERVIÇO CNH" disabled={isLoading} />
                 </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

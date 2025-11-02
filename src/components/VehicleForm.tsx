@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Vehicle, Client, ExtractedVehicleData } from '../types';
 import { CameraIcon, CloseIcon } from './Icons';
+import UppercaseInput from './ui/UppercaseInput'; // Importando o novo componente
 
 interface VehicleFormProps {
     onSave: (vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles: File[]) => Promise<void>;
@@ -108,7 +109,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="plate" className="block text-sm font-medium text-gray-700">Placa</label>
-                    <input type="text" name="plate" id="plate" value={formData.plate} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <UppercaseInput type="text" name="plate" id="plate" value={formData.plate} onChange={handleChange} required />
                 </div>
                 <div>
                     <label htmlFor="owner_id" className="block text-sm font-medium text-gray-700">Proprietário</label>
@@ -124,11 +125,11 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Marca</label>
-                    <input type="text" name="brand" id="brand" value={formData.brand} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <UppercaseInput type="text" name="brand" id="brand" value={formData.brand} onChange={handleChange} required />
                 </div>
                  <div>
                     <label htmlFor="model" className="block text-sm font-medium text-gray-700">Modelo</label>
-                    <input type="text" name="model" id="model" value={formData.model} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <UppercaseInput type="text" name="model" id="model" value={formData.model} onChange={handleChange} required />
                 </div>
             </div>
 
@@ -143,7 +144,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
                 <div>
                     <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor</label>
-                    <input type="text" name="color" id="color" value={formData.color} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <UppercaseInput type="text" name="color" id="color" value={formData.color} onChange={handleChange} required />
                 </div>
                 <div>
                     <label htmlFor="fuel_type" className="block text-sm font-medium text-gray-700">Combustível</label>
@@ -162,11 +163,11 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
 
             <div>
                 <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
-                <input type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required />
             </div>
              <div>
                 <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
-                <input type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                <UppercaseInput type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required />
             </div>
             <div>
                 <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>

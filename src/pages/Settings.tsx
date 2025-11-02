@@ -6,6 +6,7 @@ import type { AppUser, Role, PermissionsMap, CompanyProfile, Page } from '../typ
 import { PlusIcon, EditIcon, TrashIcon, CameraIcon } from '../components/Icons';
 import { createUserWithProfile, updateUserWithProfile } from '../services/supabase';
 import { supabase } from '../integrations/supabase/client';
+import UppercaseInput from '../components/ui/UppercaseInput'; // Importando o novo componente
 
 type SettingsTab = 'users' | 'permissions' | 'company';
 
@@ -109,7 +110,12 @@ const UserForm: React.FC<{
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Nome Completo</label>
-                <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} required className={inputClasses} />
+                <UppercaseInput 
+                    type="text" 
+                    value={fullName} 
+                    onChange={e => setFullName(e.target.value)} 
+                    required 
+                />
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">E-mail</label>
@@ -331,7 +337,7 @@ const CompanyTab: React.FC = () => {
     const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setCompanyData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        setCompanyData(prev => ({ ...prev, [e.target.name]: e.target.value.toUpperCase() })); // Aplicando uppercase aqui
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -347,29 +353,29 @@ const CompanyTab: React.FC = () => {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Nome da Empresa</label>
-                        <input type="text" name="name" value={companyData.name} onChange={handleChange} className={inputClasses} />
+                        <input type="text" name="name" value={companyData.name} onChange={handleChange} className={inputClasses} style={{ textTransform: 'uppercase' }} />
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-gray-700">CNPJ</label>
-                        <input type="text" name="cnpj" value={companyData.cnpj} onChange={handleChange} className={inputClasses} />
+                        <input type="text" name="cnpj" value={companyData.cnpj} onChange={handleChange} className={inputClasses} style={{ textTransform: 'uppercase' }} />
                     </div>
                  </div>
                  <div>
                     <label className="block text-sm font-medium text-gray-700">Endereço</label>
-                    <input type="text" name="address" value={companyData.address} onChange={handleChange} className={inputClasses} />
+                    <input type="text" name="address" value={companyData.address} onChange={handleChange} className={inputClasses} style={{ textTransform: 'uppercase' }} />
                 </div>
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div>
                         <label className="block text-sm font-medium text-gray-700">Cidade</label>
-                        <input type="text" name="city" value={companyData.city} onChange={handleChange} className={inputClasses} />
+                        <input type="text" name="city" value={companyData.city} onChange={handleChange} className={inputClasses} style={{ textTransform: 'uppercase' }} />
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-gray-700">Estado</label>
-                        <input type="text" name="state" value={companyData.state} onChange={handleChange} className={inputClasses} />
+                        <input type="text" name="state" value={companyData.state} onChange={handleChange} className={inputClasses} style={{ textTransform: 'uppercase' }} />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">CEP</label>
-                        <input type="text" name="zip" value={companyData.zip} onChange={handleChange} className={inputClasses} />
+                        <input type="text" name="zip" value={companyData.zip} onChange={handleChange} className={inputClasses} style={{ textTransform: 'uppercase' }} />
                     </div>
                  </div>
                  <div className="flex justify-end mt-6 pt-4 border-t">
