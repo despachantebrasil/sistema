@@ -1,50 +1,39 @@
-
-// In a real application, you would use the @google/genai package.
-// import { GoogleGenAI } from "@google/genai";
-// const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+import type { ExtractedVehicleData } from '../types';
 
 /**
- * Simulates calling the Gemini API to generate a weekly summary.
- * @returns A promise that resolves to a string containing the AI-generated summary.
+ * Simula uma chamada à API Gemini para extrair dados estruturados de um documento de veículo.
+ * @param documentContent O conteúdo de texto do documento (por exemplo, um PDF lido).
+ * @returns Uma promessa que resolve com os dados do veículo extraídos.
  */
-export const generateWeeklySummary = async (): Promise<string> => {
-  console.log("Simulating call to Gemini API...");
+export const extractVehicleDataFromDocument = async (documentContent: string): Promise<ExtractedVehicleData> => {
+    console.log("Enviando conteúdo do documento para análise da IA...");
+    
+    // Simula um atraso de rede para a chamada da API
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-  // This is a mocked delay to simulate network latency.
-  await new Promise(resolve => setTimeout(resolve, 1500));
+    // --- Simulação do Prompt para o Gemini ---
+    // O prompt real seria algo como:
+    // "Extraia as seguintes informações do documento do veículo e retorne em formato JSON:
+    // plate, chassis, renavam, brand, model, year_manufacture, year_model, color, fuel_type.
+    // O documento contém o seguinte texto: [documentContent]"
 
-  // In a real scenario, you would make the API call like this:
-  /*
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Generate a concise weekly summary for a vehicle documentation agency dashboard.
-        Current KPIs: 43 services in progress, 12 documents pending, R$ 25,780.50 in revenue this month.
-        Highlight key metrics, identify potential bottlenecks (e.g., pending documents),
-        and suggest one action item for the team.
-        The tone should be professional and encouraging.
-      `,
-    });
-    return response.text;
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    return "Não foi possível gerar o resumo. Por favor, tente novamente.";
-  }
-  */
+    // --- Resposta Simulada do Gemini ---
+    // Em um cenário real, o Gemini analisaria o `documentContent` e retornaria um JSON.
+    // Aqui, estamos retornando um objeto mockado para fins de demonstração.
+    const mockExtractedData: ExtractedVehicleData = {
+        plate: 'ABC1D23',
+        chassis: '9BWZZZ3F8YT123456',
+        renavam: '12345678901',
+        brand: 'VOLKSWAGEN',
+        model: 'GOL 1.0',
+        year_manufacture: 2022,
+        year_model: 2023,
+        color: 'Branco',
+        fuel_type: 'Flex (Álcool/Gasolina)',
+        licensing_expiration_date: '2024-10-31',
+    };
 
-  // Mocked response for demonstration purposes.
-  const mockSummary = `
-    **Resumo da Semana:**
-    \n\n
-    A equipe demonstrou um excelente desempenho, com **43 serviços atualmente em andamento**. 
-    O faturamento mensal atingiu **R$ 25.780,50**, refletindo um progresso sólido em direção às metas.
-    \n\n
-    **Ponto de Atenção:** Temos **12 documentos pendentes** que requerem atenção. Acelerar essas pendências é crucial para manter a satisfação do cliente.
-    \n\n
-    **Ação Sugerida:** Focar na força-tarefa para resolver as pendências de documentos nas próximas 48 horas.
-  `;
-  
-  console.log("Mocked Gemini response received.");
-  return mockSummary;
+    console.log("Dados extraídos pela IA:", mockExtractedData);
+    
+    return mockExtractedData;
 };

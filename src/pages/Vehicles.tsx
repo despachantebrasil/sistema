@@ -3,7 +3,8 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal from '../components/VehicleDetailsModal';
-import type { Vehicle, AlertStatus, Client } from '../types';
+import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; // Importando o novo componente
+import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
 import { PlusIcon, LoaderIcon } from '../components/Icons';
 import { fetchVehicles, createVehicle, fetchClients, deleteClient } from '../services/supabase';
 
@@ -55,6 +56,7 @@ const Vehicles: React.FC = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState<VehicleWithOwnerName | null>(null);
     const [loading, setLoading] = useState(true);
+    const [prefilledData, setPrefilledData] = useState<ExtractedVehicleData | undefined>(undefined);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -65,7 +67,6 @@ const Vehicles: React.FC = () => {
             ]);
             setClients(clientData);
             
-            // Map vehicles to include ownerName for display purposes
             const vehiclesWithNames: VehicleWithOwnerName[] = vehicleData.map(v => {
                 const owner = clientData.find(c => c.id === v.owner_id);
                 return {
@@ -74,7 +75,7 @@ const Vehicles: React.FC = () => {
                 };
             });
             setVehicles(vehiclesWithNames);
-        } catch (error) {
+        } catch (error) => {
             console.error('Erro ao carregar dados:', error);
             alert('Não foi possível carregar a lista de veículos.');
         } finally {
@@ -88,7 +89,6 @@ const Vehicles: React.FC = () => {
 
     const handleSaveVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles: File[]) => {
         try {
-            // Note: Update logic is not implemented yet, only creation is supported via form
             await createVehicle(vehicleData, imageFiles);
             await loadData();
         } catch (error) {
@@ -99,7 +99,6 @@ const Vehicles: React.FC = () => {
     const handleDeleteVehicle = async (vehicleId: number, plate: string) => {
         if (window.confirm(`Tem certeza que deseja excluir o veículo de placa "${plate}"?`)) {
             try {
-                // Usando deleteClient como placeholder para deleteVehicle, mas corrigindo a tipagem de retorno
                 await deleteClient(vehicleId); 
                 await loadData();
             } catch (error) {
@@ -117,18 +116,35 @@ const Vehicles: React.FC = () => {
         setSelectedVehicle(null);
     };
 
+    const handleDataExtracted = (data: ExtractedVehicleData) => {
+        console.log("Dados recebidos na página:", data);
+        setPrefilledData(data);
+        setIsFormModalOpen(true);
+    };
+    
+    const handleCloseModal = () => {
+        setIsFormModalOpen(false);
+        setPrefilledData(undefined); // Limpa os dados pré-preenchidos ao fechar
+    };
+
     return (
         <div className="p-4 md:p-8">
             <Card>
                 <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                     <h2 className="text-xl font-bold">Frota de Veículos</h2>
-                    <button 
-                        onClick={() => setIsFormModalOpen(true)}
-                        className="flex items-center justify-center btn-hover"
-                    >
-                        <PlusIcon className="w-5 h-5 mr-2" />
-                        Adicionar Veículo
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <VehicleDocumentUpload 
+                            onDataExtracted={handleDataExtracted}
+                            onError={(message) => alert(`Erro: ${message}`)}
+                        />
+                        <button 
+                            onClick={() => setIsFormModalOpen(true)}
+                            className="flex items-center justify-center btn-hover"
+                        >
+                            <PlusIcon className="w-5 h-5 mr-2" />
+                            Adicionar Manualmente
+                        </button>
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left min-w-[700px]">
@@ -178,11 +194,12 @@ const Vehicles: React.FC = () => {
 
             <VehicleDetailsModal vehicle={selectedVehicle} onClose={handleCloseDetails} />
 
-            <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Adicionar Novo Veículo">
+            <Modal isOpen={isFormModalOpen} onClose={handleCloseModal} title="Adicionar Novo Veículo">
                 <VehicleForm 
                     onSave={handleSaveVehicle}
-                    onCancel={() => setIsFormModalOpen(false)}
+                    onCancel={handleCloseModal}
                     clients={clients}
+                    prefilledData={prefilledData} // Passando os dados para o formulário
                 />
             </Modal>
         </div>

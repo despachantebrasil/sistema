@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Vehicle, Client } from '../types';
+import type { Vehicle, Client, ExtractedVehicleData } from '../types';
 import { CameraIcon, CloseIcon } from './Icons';
 
 interface VehicleFormProps {
@@ -7,21 +7,22 @@ interface VehicleFormProps {
     onCancel: () => void;
     clients: Client[];
     vehicle?: Vehicle; // For editing
+    prefilledData?: ExtractedVehicleData; // For AI pre-filling
 }
 
-const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, vehicle }) => {
+const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, vehicle, prefilledData }) => {
     const [formData, setFormData] = useState({
-        plate: vehicle?.plate || '',
-        chassis: vehicle?.chassis || '',
-        renavam: vehicle?.renavam || '',
-        brand: vehicle?.brand || '',
-        model: vehicle?.model || '',
-        year_manufacture: vehicle?.year_manufacture || new Date().getFullYear(),
-        year_model: vehicle?.year_model || new Date().getFullYear(),
-        color: vehicle?.color || '',
-        fuel_type: vehicle?.fuel_type || '',
+        plate: vehicle?.plate || prefilledData?.plate || '',
+        chassis: vehicle?.chassis || prefilledData?.chassis || '',
+        renavam: vehicle?.renavam || prefilledData?.renavam || '',
+        brand: vehicle?.brand || prefilledData?.brand || '',
+        model: vehicle?.model || prefilledData?.model || '',
+        year_manufacture: vehicle?.year_manufacture || prefilledData?.year_manufacture || new Date().getFullYear(),
+        year_model: vehicle?.year_model || prefilledData?.year_model || new Date().getFullYear(),
+        color: vehicle?.color || prefilledData?.color || '',
+        fuel_type: vehicle?.fuel_type || prefilledData?.fuel_type || '',
         owner_id: vehicle?.owner_id || '',
-        licensing_expiration_date: vehicle?.licensing_expiration_date || '',
+        licensing_expiration_date: vehicle?.licensing_expiration_date || prefilledData?.licensing_expiration_date || '',
     });
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.image_urls || []);
@@ -58,7 +59,6 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         newImagePreviews.splice(index, 1);
         setImagePreviews(newImagePreviews);
 
-        // If the removed image was a new file (blob URL), remove it from imageFiles
         if (removedPreview.startsWith('blob:')) {
             const fileIndex = imageFiles.findIndex(file => URL.createObjectURL(file) === removedPreview);
             if (fileIndex !== -1) {
@@ -85,12 +85,11 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 year_manufacture: Number(formData.year_manufacture),
                 year_model: Number(formData.year_model),
                 owner_id: Number(formData.owner_id),
-                image_urls: imagePreviews.filter(p => !p.startsWith('blob:')), // Keep only existing URLs
+                image_urls: imagePreviews.filter(p => !p.startsWith('blob:')),
             };
 
             await onSave(vehicleDataToSave as Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles);
             
-            // Clean up temporary URLs
             imagePreviews.forEach((url: string) => {
                 if(url.startsWith('blob:')) URL.revokeObjectURL(url)
             });
@@ -152,7 +151,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                         <option value="">Selecione...</option>
                         <option value="Gasolina">Gasolina</option>
                         <option value="Álcool">Álcool</option>
-                        <option value="Flex">Flex (Álcool/Gasolina)</option>
+                        <option value="Flex (Álcool/Gasolina)">Flex (Álcool/Gasolina)</option>
                         <option value="Diesel">Diesel</option>
                         <option value="GNV">GNV</option>
                         <option value="Elétrico">Elétrico</option>

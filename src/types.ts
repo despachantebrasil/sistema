@@ -56,6 +56,10 @@ export interface Vehicle {
   created_at: string;
 }
 
+// Novo tipo para os dados extraídos do documento do veículo
+export type ExtractedVehicleData = Partial<Omit<Vehicle, 'id' | 'user_id' | 'owner_id' | 'created_at' | 'image_urls'>>;
+
+
 export interface Service {
   id: number;
   user_id: string; // Chave estrangeira para auth.users
