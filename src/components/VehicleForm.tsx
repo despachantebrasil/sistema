@@ -137,13 +137,13 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 </div>
             </div>
             
-            {/* Chassi e Potência/Cilindrada (2 colunas) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+            {/* Chassi (2/3) e Potência/Cilindrada (1/3) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
                     <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
                     <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required />
                 </div>
-                <div>
+                <div className="md:col-span-1">
                     <label htmlFor="capacity_power_cc" className="block text-sm font-medium text-gray-700">Potência/Cilindrada</label>
                     <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="EX: 100 CV / 1000 CC" />
                 </div>
