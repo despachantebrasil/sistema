@@ -250,7 +250,7 @@ const Dashboard: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [clientMap, vehicleMap]); // Adicionado dependências para useCallback
+    }, []);
 
     useEffect(() => {
         loadDashboardData();
