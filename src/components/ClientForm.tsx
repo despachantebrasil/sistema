@@ -5,6 +5,7 @@ import { CameraIcon } from './Icons';
 
 interface ClientFormProps {
     // O onSave agora espera o payload completo (Omitindo apenas id, user_id e created_at)
+    // O doc_status é incluído porque é calculado e enviado.
     onSave: (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null) => Promise<void>;
     onCancel: () => void;
     client?: Client; // For editing
@@ -82,7 +83,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         }
 
         if (type === ClientType.INDIVIDUAL) {
-            const individual Fields = [
+            const individualFields = [
                 data.marital_status,
                 data.profession,
                 data.nationality,
@@ -125,7 +126,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                 // Remove avatar_url from payload if we are uploading a file, 
                 // as the service function handles the URL update.
                 avatar_url: avatarFile ? undefined : formData.avatar_url,
-            } as Omit<Client, 'id' | 'user_id' | 'created_at'>; // Casting para garantir que o tipo final seja o esperado
+            } as Omit<Client, 'id' | 'user_id' | 'created_at'>;
             
             await onSave(clientDataToSave, avatarFile);
             
