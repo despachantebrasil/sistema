@@ -59,7 +59,8 @@ const Clients: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'doc_status' | 'created_at'>, avatarFile: File | null) => {
+    // Corrigido o tipo de clientData para incluir doc_status, conforme retornado pelo ClientForm
+    const handleSaveClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'> & { doc_status: ClientDocStatus }, avatarFile: File | null) => {
         try {
             if (editingClient) {
                 await updateClient(editingClient.id, clientData, avatarFile);

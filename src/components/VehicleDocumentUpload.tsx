@@ -5,8 +5,7 @@ import type { ExtractedVehicleData } from '../types';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Configuração do worker para o pdfjs-dist
-// Usando a versão 3.4.120 que foi instalada
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface VehicleDocumentUploadProps {
     onDataExtracted: (data: ExtractedVehicleData) => void;
@@ -38,14 +37,15 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
 
                 try {
                     const typedarray = new Uint8Array(e.target.result as ArrayBuffer);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    const pdf = await (pdfjsLib as any).getDocument(typedarray).promise;
                     let textContent = '';
 
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const text = await page.getTextContent();
-                        // Tipando item para resolver TS7006
-                        textContent += text.items.map((item: { str: string }) => item.str).join(' ');
+                        
+                        // Corrigido: Mapear apenas itens que possuem a propriedade 'str' (TextItem)
+                        textContent += text.items.map((item: any) => ('str' in item ? item.str : '')).join(' ');
                     }
                     
                     if (!textContent.trim()) {
@@ -54,7 +54,7 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
                         return;
                     }
 
-                    const extractedData = await extractVehicleDataFromDocument(textContent);
+                    const extractedData = await extractVehicleDataFromDocument(textContent); // Passando textContent
                     onDataExtracted(extractedData);
 
                 } catch (pdfError) {
@@ -107,8 +107,7 @@ const VehicleDocumentUpload: React.FC<VehicleDocumentUploadProps> = ({ onDataExt
                         <SparklesIcon className="w-5 h-5 mr-2" />
                         Preencher com IA
                     </>
-                )
-                }
+                )}
             </button>
         </>
     );

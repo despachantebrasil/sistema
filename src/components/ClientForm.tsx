@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import type { Client } from '../types';
-import { ClientType } from '../types';
+import { ClientType, ClientDocStatus } from '../types';
 import { CameraIcon } from './Icons';
 
 interface ClientFormProps {
-    onSave: (clientData: Omit<Client, 'id' | 'user_id' | 'doc_status' | 'created_at'>, avatarFile: File | null) => Promise<void>;
+    // O onSave agora espera o payload completo (Omitindo apenas id, user_id e created_at)
+    onSave: (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'>, avatarFile: File | null) => Promise<void>;
     onCancel: () => void;
     client?: Client; // For editing
 }
@@ -66,6 +67,44 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
+    
+    const checkDocumentationStatus = (data: typeof formData, type: ClientType): ClientDocStatus => {
+        const requiredFields = [
+            data.name,
+            data.phone,
+            data.email,
+            data.address,
+            data.cpf_cnpj,
+        ];
+
+        if (requiredFields.some(field => !field || field.trim() === '')) {
+            return ClientDocStatus.PENDING;
+        }
+
+        if (type === ClientType.INDIVIDUAL) {
+            const individual Fields = [
+                data.marital_status,
+                data.profession,
+                data.nationality,
+                data.naturalness,
+                data.cnh_expiration_date,
+            ];
+            if (individualFields.some(field => !field || field.trim() === '')) {
+                return ClientDocStatus.IN_PROGRESS;
+            }
+        } else if (type === ClientType.COMPANY) {
+            const companyFields = [
+                data.trade_name,
+                data.contact_name,
+            ];
+            if (companyFields.some(field => !field || field.trim() === '')) {
+                return ClientDocStatus.IN_PROGRESS;
+            }
+        }
+        
+        return ClientDocStatus.COMPLETED;
+    };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -77,15 +116,18 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         setIsLoading(true);
 
         try {
-            const clientDataToSave = {
+            const newDocStatus = checkDocumentationStatus(formData, clientType);
+            
+            const clientDataToSave: Omit<Client, 'id' | 'user_id' | 'created_at'> = {
                 ...formData,
                 client_type: clientType,
+                doc_status: newDocStatus, // Adicionando o status calculado
                 // Remove avatar_url from payload if we are uploading a file, 
                 // as the service function handles the URL update.
                 avatar_url: avatarFile ? undefined : formData.avatar_url,
-            };
+            } as Omit<Client, 'id' | 'user_id' | 'created_at'>; // Casting para garantir que o tipo final seja o esperado
             
-            await onSave(clientDataToSave as Omit<Client, 'id' | 'user_id' | 'doc_status' | 'created_at'>, avatarFile);
+            await onSave(clientDataToSave, avatarFile);
             
             // Clean up temporary URL if one was created
             if (avatarFile && avatarPreview && avatarPreview.startsWith('blob:')) {

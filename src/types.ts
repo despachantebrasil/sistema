@@ -69,6 +69,8 @@ export interface Service {
   status: ServiceStatus;
   due_date: string; // YYYY-MM-DD, Alterado para snake_case
   price: number;
+  payer_client_id?: number; // Novo campo
+  payer_client_name?: string; // Novo campo
   created_at: string;
 }
 

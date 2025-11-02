@@ -139,7 +139,8 @@ export const fetchClients = async (): Promise<Client[]> => {
     return data as Client[];
 };
 
-export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'doc_status' | 'created_at'>, avatarFile: File | null): Promise<Client> => {
+// Atualizado para aceitar doc_status no payload
+export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | 'created_at'> & { doc_status: ClientDocStatus }, avatarFile: File | null): Promise<Client> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
@@ -165,7 +166,6 @@ export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | '
     const payload = {
         ...clientData,
         user_id: userId,
-        doc_status: ClientDocStatus.PENDING,
         avatar_url,
     };
 
@@ -179,7 +179,8 @@ export const createClient = async (clientData: Omit<Client, 'id' | 'user_id' | '
     return data as Client;
 };
 
-export const updateClient = async (clientId: number, clientData: Partial<Omit<Client, 'user_id' | 'created_at'>>, avatarFile: File | null): Promise<Client> => {
+// Atualizado para aceitar doc_status no payload
+export const updateClient = async (clientId: number, clientData: Partial<Omit<Client, 'user_id' | 'created_at'>> & { doc_status?: ClientDocStatus }, avatarFile: File | null): Promise<Client> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
@@ -294,7 +295,7 @@ export const fetchServices = async (): Promise<Service[]> => {
     return data as Service[];
 };
 
-export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' | 'status' | 'created_at'>): Promise<Service> => {
+export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' | 'created_at'>): Promise<Service> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
@@ -404,8 +405,6 @@ export const fetchDashboardKpis = async () => {
     const totalRevenue = revenueData.reduce((sum, t) => sum + t.amount, 0);
 
     // 4. Pending Alerts (CNH/Licensing expiring soon or expired)
-    // This requires fetching all clients and vehicles to calculate alerts on the client side, 
-    // as complex date logic is easier in JS than in a single Supabase query.
     const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select('id, name, cnh_expiration_date');
@@ -416,12 +415,8 @@ export const fetchDashboardKpis = async () => {
 
     if (clientsError || vehiclesError) {
         console.error("Error fetching data for alerts:", clientsError || vehiclesError);
-        // Continue with 0 alerts if fetching fails
     }
     
-    // The actual alert calculation logic will remain in the Header component for now, 
-    // but we return the raw data needed for it.
-
     return {
         clientCount: clientCount || 0,
         activeServiceCount: activeServiceCount || 0,
