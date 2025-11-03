@@ -91,13 +91,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         let detailFields: (string | number | undefined)[] = [data.address];
 
         if (type === ClientType.INDIVIDUAL) {
+            // CNH não é mais obrigatória para COMPLETED
             detailFields = detailFields.concat([
                 data.marital_status,
                 data.profession,
                 data.nationality,
                 data.naturalness,
-                data.cnh_number,
-                data.cnh_expiration_date,
             ]);
         } else if (type === ClientType.COMPANY) {
             detailFields = detailFields.concat([
