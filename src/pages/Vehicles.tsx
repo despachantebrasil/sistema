@@ -4,10 +4,10 @@ import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal, { PrintableVehicleDetails } from '../components/VehicleDetailsModal'; 
 import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; 
-import VehicleTransferModal from '../components/VehicleTransferModal'; // Importando o novo modal
+import VehicleTransferModal from '../components/VehicleTransferModal'; 
 import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
-import { PlusIcon, LoaderIcon } from '../components/Icons'; // Adicionar ícone de transferência se necessário
-import { fetchVehicles, createVehicle, fetchClients, deleteVehicle, transferVehicle } from '../services/supabase'; // Importando a nova função
+import { PlusIcon, LoaderIcon, EditIcon } from '../components/Icons'; 
+import { fetchVehicles, createVehicle, fetchClients, deleteVehicle, transferVehicle, updateVehicle } from '../services/supabase'; 
 import { printComponent } from '../utils/printUtils';
 
 const getAlertStatus = (dateString: string | undefined): AlertStatus => {
@@ -54,6 +54,7 @@ const Vehicles: React.FC = () => {
     const [vehicles, setVehicles] = useState<VehicleWithOwnerName[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null); // Novo estado para edição
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [vehicleToTransfer, setVehicleToTransfer] = useState<VehicleWithOwnerName | null>(null);
     const [selectedVehicle, setSelectedVehicle] = useState<VehicleWithOwnerName | null>(null);
@@ -89,9 +90,31 @@ const Vehicles: React.FC = () => {
         loadData();
     }, [loadData]);
 
-    const handleSaveVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles: File[]) => {
+    const handleOpenFormModal = (vehicle: Vehicle | null = null) => {
+        setEditingVehicle(vehicle);
+        setPrefilledData(undefined); // Limpa dados de IA se estiver abrindo manualmente
+        setIsFormModalOpen(true);
+    };
+
+    const handleCloseFormModal = () => {
+        setIsFormModalOpen(false);
+        setEditingVehicle(null);
+        setPrefilledData(undefined);
+    };
+
+    const handleSaveVehicle = async (
+        vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, 
+        imageFiles: File[], 
+        isEditing: boolean, 
+        vehicleId?: number,
+        existingImageUrls?: string[]
+    ) => {
         try {
-            await createVehicle(vehicleData, imageFiles);
+            if (isEditing && vehicleId) {
+                await updateVehicle(vehicleId, vehicleData, imageFiles, existingImageUrls || []);
+            } else {
+                await createVehicle(vehicleData, imageFiles);
+            }
             await loadData();
         } catch (error) {
             throw error;
@@ -138,14 +161,10 @@ const Vehicles: React.FC = () => {
 
     const handleDataExtracted = (data: ExtractedVehicleData) => {
         setPrefilledData(data);
+        setEditingVehicle(null); // Garante que é um novo cadastro
         setIsFormModalOpen(true);
     };
     
-    const handleCloseModal = () => {
-        setIsFormModalOpen(false);
-        setPrefilledData(undefined);
-    };
-
     const handlePrintVehicle = (vehicle: VehicleWithOwnerName) => {
         printComponent(PrintableVehicleDetails, { vehicle });
     };
@@ -161,7 +180,7 @@ const Vehicles: React.FC = () => {
                             onError={(message) => alert(`Erro: ${message}`)}
                         />
                         <button 
-                            onClick={() => setIsFormModalOpen(true)}
+                            onClick={() => handleOpenFormModal(null)}
                             className="flex items-center justify-center btn-hover"
                         >
                             <PlusIcon className="w-5 h-5 mr-2" />
@@ -206,6 +225,9 @@ const Vehicles: React.FC = () => {
                                         <td className="p-4 text-center">
                                             <div className="flex items-center justify-center space-x-4">
                                                 <button onClick={() => handleOpenDetails(vehicle)} className="text-primary hover:underline font-semibold text-sm">Detalhes</button>
+                                                <button onClick={() => handleOpenFormModal(vehicle)} className="text-blue-600 hover:underline font-semibold text-sm flex items-center">
+                                                    <EditIcon className="w-4 h-4 mr-1" /> Editar
+                                                </button>
                                                 <button onClick={() => handleOpenTransferModal(vehicle)} className="text-green-600 hover:underline font-semibold text-sm">→ Transferir</button>
                                                 <button onClick={() => handleDeleteVehicle(vehicle.id, vehicle.plate)} className="text-red-600 hover:underline font-semibold text-sm">Excluir</button>
                                             </div>
@@ -224,11 +246,12 @@ const Vehicles: React.FC = () => {
                 onPrint={handlePrintVehicle}
             />
 
-            <Modal isOpen={isFormModalOpen} onClose={handleCloseModal} title="Adicionar Novo Veículo">
+            <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingVehicle ? "Editar Veículo" : "Adicionar Novo Veículo"}>
                 <VehicleForm 
-                    onSave={handleSaveVehicle}
-                    onCancel={handleCloseModal}
+                    onSave={handleSaveVehicle as any} // Casting para lidar com a nova assinatura
+                    onCancel={handleCloseFormModal}
                     clients={clients}
+                    vehicle={editingVehicle || undefined}
                     prefilledData={prefilledData}
                 />
             </Modal>

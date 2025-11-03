@@ -4,7 +4,13 @@ import { CameraIcon, CloseIcon } from './Icons';
 import UppercaseInput from './ui/UppercaseInput';
 
 interface VehicleFormProps {
-    onSave: (vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles: File[]) => Promise<void>;
+    onSave: (
+        vehicleData: Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, 
+        imageFiles: File[], 
+        isEditing: boolean, 
+        vehicleId?: number,
+        existingImageUrls?: string[] // Adicionado o quinto argumento
+    ) => Promise<void>;
     onCancel: () => void;
     clients: Client[];
     vehicle?: Vehicle; // For editing
@@ -12,6 +18,8 @@ interface VehicleFormProps {
 }
 
 const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, vehicle, prefilledData }) => {
+    const isEditing = !!vehicle;
+    
     const [formData, setFormData] = useState({
         plate: vehicle?.plate || prefilledData?.plate || '',
         chassis: vehicle?.chassis || prefilledData?.chassis || '',
@@ -28,6 +36,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         capacity_power_cc: vehicle?.capacity_power_cc || '', // Novo campo
     });
     const [imageFiles, setImageFiles] = useState<File[]>([]);
+    // imagePreviews agora armazena URLs de blob (novas) e URLs de string (existentes)
     const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.image_urls || []);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -57,11 +66,14 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
     };
 
     const handleRemoveImage = (index: number) => {
+        const removedPreview = imagePreviews[index];
+        
+        // 1. Remove da lista de previews
         const newImagePreviews = [...imagePreviews];
-        const removedPreview = newImagePreviews[index];
         newImagePreviews.splice(index, 1);
         setImagePreviews(newImagePreviews);
 
+        // 2. Se for uma imagem recém-adicionada (URL de blob), remove da lista de arquivos a serem enviados
         if (removedPreview.startsWith('blob:')) {
             const fileIndex = imageFiles.findIndex(file => URL.createObjectURL(file) === removedPreview);
             if (fileIndex !== -1) {
@@ -71,6 +83,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             }
             URL.revokeObjectURL(removedPreview);
         }
+        // Se não for uma URL de blob, é uma URL existente que será excluída do array image_urls no DB.
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -83,16 +96,26 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         setIsLoading(true);
 
         try {
+            // Filtra apenas as URLs existentes (não-blob) para enviar ao DB
+            const existingImageUrls = imagePreviews.filter(p => !p.startsWith('blob:'));
+            
             const vehicleDataToSave = {
                 ...formData,
                 year_manufacture: Number(formData.year_manufacture),
                 year_model: Number(formData.year_model),
                 owner_id: Number(formData.owner_id),
-                image_urls: imagePreviews.filter(p => !p.startsWith('blob:')),
+                // image_urls é tratado na função onSave/updateVehicle
             };
 
-            await onSave(vehicleDataToSave as Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, imageFiles);
+            await onSave(
+                vehicleDataToSave as Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, 
+                imageFiles, 
+                isEditing, 
+                isEditing ? vehicle!.id : undefined, // Usando 'vehicle!' pois isEditing garante que vehicle existe
+                existingImageUrls // Passa as URLs existentes que devem ser mantidas
+            );
             
+            // Limpa URLs de blob criadas localmente
             imagePreviews.forEach((url: string) => {
                 if(url.startsWith('blob:')) URL.revokeObjectURL(url)
             });
@@ -237,7 +260,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                     Cancelar
                 </button>
                 <button type="submit" className="btn-scale" disabled={isLoading}>
-                    {isLoading ? 'Salvando...' : 'Salvar Veículo'}
+                    {isLoading ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Salvar Veículo')}
                 </button>
             </div>
         </form>

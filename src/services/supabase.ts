@@ -326,6 +326,51 @@ export const createVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'user_id' 
     return data as Vehicle;
 };
 
+export const updateVehicle = async (vehicleId: number, vehicleData: Partial<Omit<Vehicle, 'user_id' | 'created_at' | 'image_urls'>>, newImageFiles: File[], existingImageUrls: string[]): Promise<Vehicle> => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) throw new Error("Usuário não autenticado.");
+    const userId = user.data.user.id;
+    
+    const imageUrls: string[] = [...existingImageUrls];
+
+    // Upload new images
+    for (const file of newImageFiles) {
+        // Use the vehicle's plate for the path, assuming it hasn't changed significantly
+        const plate = vehicleData.plate || (await supabase.from('vehicles').select('plate').eq('id', vehicleId).single()).data?.plate || 'unknown';
+        const filePath = `${userId}/vehicles/${plate}/${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabase.storage
+            .from('vehicle_images')
+            .upload(filePath, file);
+
+        if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+                .from('vehicle_images')
+                .getPublicUrl(filePath);
+            imageUrls.push(publicUrl);
+        } else {
+            console.error('Erro ao fazer upload da nova imagem do veículo:', uploadError);
+        }
+    }
+
+    const payload = {
+        ...vehicleData,
+        image_urls: imageUrls,
+    };
+
+    const { data, error } = await supabase
+        .from('vehicles')
+        .update(payload)
+        .eq('id', vehicleId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    
+    await logAction('VEHICLE_UPDATED', { type: 'vehicle', id: data.id }, { plate: data.plate });
+
+    return data as Vehicle;
+};
+
 export const deleteVehicle = async (vehicleId: number): Promise<void> => {
     const { error } = await supabase
         .from('vehicles')
