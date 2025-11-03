@@ -5,7 +5,17 @@ import UppercaseInput from './ui/UppercaseInput';
 interface VehicleTransferModalProps {
     vehicle: Vehicle & { ownerName: string };
     clients: Client[];
-    onConfirm: (newOwnerId: number, price: number, dueDate: string, payerId: number, agentName: string) => Promise<void>;
+    onConfirm: (
+        newOwnerId: number, 
+        price: number, 
+        dueDate: string, 
+        payerId: number, 
+        agentName: string,
+        detranScheduleTime: string,
+        contactPhone: string,
+        paymentStatus: 'Pago' | 'Pendente',
+        situationNotes: string
+    ) => Promise<void>;
     onCancel: () => void;
 }
 
@@ -22,6 +32,13 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
     const [dueDate, setDueDate] = useState<string>('');
     const [payerId, setPayerId] = useState<number | ''>(vehicle.owner_id);
     const [agentName, setAgentName] = useState<string>('');
+    
+    // Novos campos de rastreamento
+    const [detranScheduleTime, setDetranScheduleTime] = useState<string>('');
+    const [contactPhone, setContactPhone] = useState<string>('');
+    const [paymentStatus, setPaymentStatus] = useState<'Pago' | 'Pendente'>('Pendente');
+    const [situationNotes, setSituationNotes] = useState<string>('');
+    
     const [isLoading, setIsLoading] = useState(false);
 
     const availableClients = useMemo(() => {
@@ -31,12 +48,22 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newOwnerId || !price || !dueDate || !payerId || !agentName) {
-            alert('Por favor, preencha todos os campos.');
+            alert('Por favor, preencha todos os campos obrigatórios (Comprador, Valor, Prazo, Responsável).');
             return;
         }
         setIsLoading(true);
         try {
-            await onConfirm(Number(newOwnerId), parseFloat(price), dueDate, Number(payerId), agentName);
+            await onConfirm(
+                Number(newOwnerId), 
+                parseFloat(price), 
+                dueDate, 
+                Number(payerId), 
+                agentName,
+                detranScheduleTime,
+                contactPhone,
+                paymentStatus,
+                situationNotes
+            );
         } catch (error) {
             console.error("Erro ao confirmar transferência:", error);
             alert('Não foi possível concluir a transferência.');
@@ -49,7 +76,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
     const disabledInputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm sm:text-sm";
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
             <div className="p-4 border rounded-lg bg-gray-50 space-y-3">
                 <div className="flex justify-between items-start">
                     <h3 className="font-bold text-lg text-dark-text">{vehicle.brand} {vehicle.model}</h3>
@@ -79,35 +106,62 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="agentName" className="block text-sm font-medium text-gray-700">Responsável pela Transferência (Despachante)</label>
+                    <label htmlFor="agentName" className="block text-sm font-medium text-gray-700">Responsável pelo Processo (Despachante)</label>
                     <UppercaseInput id="agentName" type="text" value={agentName} onChange={(e) => setAgentName(e.target.value)} required disabled={isLoading} placeholder="Nome do despachante ou empresa" />
                 </div>
             </div>
 
             <div className="space-y-4 border-t pt-4">
+                <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Detalhes do Serviço e Agendamento</h4>
                  <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="price" className="block text-sm font-medium text-gray-700">Valor do Serviço (R$)</label>
                         <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClasses} required step="0.01" min="0" disabled={isLoading} />
                     </div>
                     <div>
-                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">Prazo do Serviço</label>
+                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">Prazo Final do Serviço</label>
                         <input type="date" id="dueDate" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClasses} required disabled={isLoading} />
                     </div>
                 </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="detranScheduleTime" className="block text-sm font-medium text-gray-700">Horário Agendado no DETRAN</label>
+                        <input type="time" id="detranScheduleTime" value={detranScheduleTime} onChange={(e) => setDetranScheduleTime(e.target.value)} className={inputClasses} disabled={isLoading} />
+                    </div>
+                    <div>
+                        <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700">Contato do Responsável (Telefone ou *)</label>
+                        <UppercaseInput type="text" id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="Ex: (11) 99999-9999 ou *" disabled={isLoading} />
+                    </div>
+                </div>
+                
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Quem pagará pelo serviço?</label>
-                    <div className="mt-2 flex items-center space-x-4">
-                        <label className="flex items-center">
-                            <input type="radio" name="payer" value={vehicle.owner_id} checked={payerId === vehicle.owner_id} onChange={() => setPayerId(vehicle.owner_id)} className="h-4 w-4 text-primary focus:ring-primary-dark" />
-                            <span className="ml-2 text-sm">Vendedor ({vehicle.ownerName})</span>
-                        </label>
-                        {newOwnerId && (
-                             <label className="flex items-center">
-                                <input type="radio" name="payer" value={newOwnerId} checked={payerId === newOwnerId} onChange={() => setPayerId(newOwnerId)} className="h-4 w-4 text-primary focus:ring-primary-dark" />
-                                <span className="ml-2 text-sm">Comprador ({clients.find(c => c.id === newOwnerId)?.name})</span>
+                    <label htmlFor="situationNotes" className="block text-sm font-medium text-gray-700">Situação Inicial / Pendências</label>
+                    <textarea id="situationNotes" value={situationNotes} onChange={(e) => setSituationNotes(e.target.value)} rows={2} className={inputClasses} placeholder="Ex: OK, aguardando vistoria" disabled={isLoading} />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Quem pagará pelo serviço?</label>
+                        <div className="mt-2 flex items-center space-x-4">
+                            <label className="flex items-center">
+                                <input type="radio" name="payer" value={vehicle.owner_id} checked={payerId === vehicle.owner_id} onChange={() => setPayerId(vehicle.owner_id)} className="h-4 w-4 text-primary focus:ring-primary-dark" />
+                                <span className="ml-2 text-sm">Vendedor ({vehicle.ownerName})</span>
                             </label>
-                        )}
+                            {newOwnerId && (
+                                <label className="flex items-center">
+                                    <input type="radio" name="payer" value={newOwnerId} checked={payerId === newOwnerId} onChange={() => setPayerId(newOwnerId)} className="h-4 w-4 text-primary focus:ring-primary-dark" />
+                                    <span className="ml-2 text-sm">Comprador ({clients.find(c => c.id === newOwnerId)?.name})</span>
+                                </label>
+                            )}
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Status de Pagamento Inicial</label>
+                        <select name="paymentStatus" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value as 'Pago' | 'Pendente')} className={inputClasses} disabled={isLoading}>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Pago">Pago</option>
+                        </select>
                     </div>
                 </div>
             </div>

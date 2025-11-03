@@ -64,7 +64,7 @@ export const createUserWithProfile = async (
 ): Promise<{ user: AppUser | null; error: Error | null }> => {
     const defaultAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(
         userData.fullName
-    )}&background=random&color=fff`;
+    )}&background=0D47A1&color=fff`;
 
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -388,7 +388,11 @@ export const transferVehicle = async (
     price: number,
     dueDate: string,
     payerId: number,
-    agentName: string
+    agentName: string,
+    detranScheduleTime: string,
+    contactPhone: string,
+    paymentStatus: 'Pago' | 'Pendente',
+    situationNotes: string
 ): Promise<void> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
@@ -404,6 +408,11 @@ export const transferVehicle = async (
         due_date: dueDate,
         price: price,
         payer_client_id: payerId,
+        agent_name: agentName,
+        detran_schedule_time: detranScheduleTime || null,
+        contact_phone: contactPhone || null,
+        payment_status: paymentStatus,
+        situation_notes: situationNotes || null,
     };
     const { data: newService, error: serviceError } = await supabase
         .from('services')
@@ -457,15 +466,19 @@ export const transferVehicle = async (
 export const fetchServices = async (): Promise<Service[]> => {
     const { data, error } = await supabase
         .from('services')
-        .select('*, client:clients(name), payer:clients!payer_client_id(name)')
+        .select('*, client:clients(name, cpf_cnpj, phone), vehicle:vehicles(plate), payer:clients!payer_client_id(name)')
         .order('created_at', { ascending: false });
 
     if (error) throw error;
     
-    // Manually map payer name to a consistent property
+    // Mapeia os dados aninhados para o formato ServiceWithDetails
     return data.map((s: any) => ({
         ...s,
-        payer_client_name: s.payer?.name
+        payer_client_name: s.payer?.name,
+        clientName: s.client?.name,
+        clientCpfCnpj: s.client?.cpf_cnpj,
+        clientPhone: s.client?.phone,
+        vehiclePlate: s.vehicle?.plate,
     })) as Service[];
 };
 
@@ -492,6 +505,24 @@ export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' 
 
     return data as Service;
 };
+
+type ServiceUpdatePayload = Partial<Omit<Service, 'id' | 'user_id' | 'created_at' | 'client_id' | 'vehicle_id' | 'price'>>;
+
+export const updateService = async (serviceId: number, serviceData: ServiceUpdatePayload): Promise<Service> => {
+    const { data, error } = await supabase
+        .from('services')
+        .update(serviceData)
+        .eq('id', serviceId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    
+    await logAction('SERVICE_UPDATED', { type: 'service', id: data.id }, { status: data.status });
+
+    return data as Service;
+};
+
 
 // --- Transaction CRUD Operations ---
 

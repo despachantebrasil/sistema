@@ -138,14 +138,35 @@ const Vehicles: React.FC = () => {
         setIsTransferModalOpen(true);
     };
 
-    const handleConfirmTransfer = async (newOwnerId: number, price: number, dueDate: string, payerId: number, agentName: string) => {
+    const handleConfirmTransfer = async (
+        newOwnerId: number, 
+        price: number, 
+        dueDate: string, 
+        payerId: number, 
+        agentName: string,
+        detranScheduleTime: string,
+        contactPhone: string,
+        paymentStatus: 'Pago' | 'Pendente',
+        situationNotes: string
+    ) => {
         if (!vehicleToTransfer) return;
         try {
-            await transferVehicle(vehicleToTransfer, newOwnerId, price, dueDate, payerId, agentName);
+            await transferVehicle(
+                vehicleToTransfer, 
+                newOwnerId, 
+                price, 
+                dueDate, 
+                payerId, 
+                agentName,
+                detranScheduleTime,
+                contactPhone,
+                paymentStatus,
+                situationNotes
+            );
             setIsTransferModalOpen(false);
             setVehicleToTransfer(null);
             await loadData();
-            alert('Veículo transferido com sucesso!');
+            alert('Transferência de veículo e serviço de rastreamento criados com sucesso!');
         } catch (error) {
             throw error;
         }
