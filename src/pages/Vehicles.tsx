@@ -3,9 +3,8 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import VehicleForm from '../components/VehicleForm';
 import VehicleDetailsModal, { PrintableVehicleDetails } from '../components/VehicleDetailsModal'; 
-import VehicleDocumentUpload from '../components/VehicleDocumentUpload'; 
 import VehicleTransferModal from '../components/VehicleTransferModal'; 
-import type { Vehicle, AlertStatus, Client, ExtractedVehicleData } from '../types';
+import type { Vehicle, AlertStatus, Client } from '../types';
 import { PlusIcon, LoaderIcon, EditIcon } from '../components/Icons'; 
 import { fetchVehicles, createVehicle, fetchClients, deleteVehicle, transferVehicle, updateVehicle } from '../services/supabase'; 
 import { printComponent } from '../utils/printUtils';
@@ -54,12 +53,11 @@ const Vehicles: React.FC = () => {
     const [vehicles, setVehicles] = useState<VehicleWithOwnerName[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null); // Novo estado para edição
+    const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [vehicleToTransfer, setVehicleToTransfer] = useState<VehicleWithOwnerName | null>(null);
     const [selectedVehicle, setSelectedVehicle] = useState<VehicleWithOwnerName | null>(null);
     const [loading, setLoading] = useState(true);
-    const [prefilledData, setPrefilledData] = useState<ExtractedVehicleData | undefined>(undefined);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -92,14 +90,12 @@ const Vehicles: React.FC = () => {
 
     const handleOpenFormModal = (vehicle: Vehicle | null = null) => {
         setEditingVehicle(vehicle);
-        setPrefilledData(undefined); // Limpa dados de IA se estiver abrindo manualmente
         setIsFormModalOpen(true);
     };
 
     const handleCloseFormModal = () => {
         setIsFormModalOpen(false);
         setEditingVehicle(null);
-        setPrefilledData(undefined);
     };
 
     const handleSaveVehicle = async (
@@ -181,12 +177,6 @@ const Vehicles: React.FC = () => {
     const handleCloseDetails = () => {
         setSelectedVehicle(null);
     };
-
-    const handleDataExtracted = (data: ExtractedVehicleData) => {
-        setPrefilledData(data);
-        setEditingVehicle(null); // Garante que é um novo cadastro
-        setIsFormModalOpen(true);
-    };
     
     const handlePrintVehicle = (vehicle: VehicleWithOwnerName) => {
         printComponent(PrintableVehicleDetails, { vehicle });
@@ -198,16 +188,13 @@ const Vehicles: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                     <h2 className="text-xl font-bold">Frota de Veículos</h2>
                     <div className="flex items-center gap-4">
-                        <VehicleDocumentUpload 
-                            onDataExtracted={handleDataExtracted}
-                            onError={(message) => alert(`Erro: ${message}`)}
-                        />
+                        {/* Componente VehicleDocumentUpload removido */}
                         <button 
                             onClick={() => handleOpenFormModal(null)}
                             className="flex items-center justify-center btn-hover"
                         >
                             <PlusIcon className="w-5 h-5 mr-2" />
-                            Adicionar Manualmente
+                            Adicionar Veículo
                         </button>
                     </div>
                 </div>
@@ -271,11 +258,10 @@ const Vehicles: React.FC = () => {
 
             <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingVehicle ? "Editar Veículo" : "Adicionar Novo Veículo"}>
                 <VehicleForm 
-                    onSave={handleSaveVehicle as any} // Casting para lidar com a nova assinatura
+                    onSave={handleSaveVehicle as any}
                     onCancel={handleCloseFormModal}
                     clients={clients}
                     vehicle={editingVehicle || undefined}
-                    prefilledData={prefilledData}
                 />
             </Modal>
 

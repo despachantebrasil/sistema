@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Vehicle, Client, ExtractedVehicleData } from '../types';
+import type { Vehicle, Client } from '../types';
 import { CameraIcon, CloseIcon } from './Icons';
 import UppercaseInput from './ui/UppercaseInput';
 
@@ -14,24 +14,23 @@ interface VehicleFormProps {
     onCancel: () => void;
     clients: Client[];
     vehicle?: Vehicle; // For editing
-    prefilledData?: ExtractedVehicleData; // For AI pre-filling
 }
 
-const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, vehicle, prefilledData }) => {
+const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, vehicle }) => {
     const isEditing = !!vehicle;
     
     const [formData, setFormData] = useState({
-        plate: vehicle?.plate || prefilledData?.plate || '',
-        chassis: vehicle?.chassis || prefilledData?.chassis || '',
-        renavam: vehicle?.renavam || prefilledData?.renavam || '',
-        brand: vehicle?.brand || prefilledData?.brand || '',
-        model: vehicle?.model || prefilledData?.model || '',
-        year_manufacture: vehicle?.year_manufacture || prefilledData?.year_manufacture || new Date().getFullYear(),
-        year_model: vehicle?.year_model || prefilledData?.year_model || new Date().getFullYear(),
-        color: vehicle?.color || prefilledData?.color || '',
-        fuel_type: vehicle?.fuel_type || prefilledData?.fuel_type || '',
+        plate: vehicle?.plate || '',
+        chassis: vehicle?.chassis || '',
+        renavam: vehicle?.renavam || '',
+        brand: vehicle?.brand || '',
+        model: vehicle?.model || '',
+        year_manufacture: vehicle?.year_manufacture || new Date().getFullYear(),
+        year_model: vehicle?.year_model || new Date().getFullYear(),
+        color: vehicle?.color || '',
+        fuel_type: vehicle?.fuel_type || '',
         owner_id: vehicle?.owner_id || '',
-        licensing_expiration_date: vehicle?.licensing_expiration_date || prefilledData?.licensing_expiration_date || '',
+        licensing_expiration_date: vehicle?.licensing_expiration_date || '',
         category: vehicle?.category || '', // Novo campo
         capacity_power_cc: vehicle?.capacity_power_cc || '', // Novo campo
     });
