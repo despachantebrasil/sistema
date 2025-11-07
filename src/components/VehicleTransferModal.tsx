@@ -21,7 +21,7 @@ interface VehicleTransferModalProps {
 }
 
 const DetailItem: React.FC<{ label: string; value: string | number | undefined }> = ({ label, value }) => (
-    <div>
+    <div className="break-words"> {/* Adicionando break-words para lidar com strings longas como Chassi/RENAVAM */}
         <p className="text-xs text-gray-500">{label}</p>
         <p className="font-medium text-gray-800">{value || '-'}</p>
     </div>
@@ -91,20 +91,12 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                     <h3 className="font-bold text-lg text-dark-text">{vehicle.brand} {vehicle.model}</h3>
                     <span className="font-mono bg-gray-200 text-gray-800 px-2 py-1 rounded text-sm font-semibold border">{vehicle.plate}</span>
                 </div>
-                {/* Ajuste do grid para 4 colunas em telas maiores */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-2">
-                    <div className="col-span-2 lg:col-span-1">
-                        <DetailItem label="Proprietário Atual (Ref.)" value={currentOwner} />
-                    </div>
-                    <div className="col-span-2 lg:col-span-1">
-                        <DetailItem label="Chassi" value={vehicle.chassis} />
-                    </div>
-                    <div className="col-span-1 lg:col-span-1">
-                        <DetailItem label="RENAVAM" value={vehicle.renavam} />
-                    </div>
-                    <div className="col-span-1 lg:col-span-1">
-                        <DetailItem label="Ano/Cor" value={`${vehicle.year_manufacture}/${vehicle.year_model} - ${vehicle.color}`} />
-                    </div>
+                {/* Reorganizando o grid para 2 colunas com mais espaçamento vertical */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <DetailItem label="Proprietário Atual (Ref.)" value={currentOwner} />
+                    <DetailItem label="Ano/Cor" value={`${vehicle.year_manufacture}/${vehicle.year_model} - ${vehicle.color}`} />
+                    <DetailItem label="Chassi" value={vehicle.chassis} />
+                    <DetailItem label="RENAVAM" value={vehicle.renavam} />
                 </div>
             </div>
 
