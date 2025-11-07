@@ -466,9 +466,16 @@ export const transferVehicle = async (
 // --- Service CRUD Operations ---
 
 export const fetchServices = async (): Promise<Service[]> => {
+    // Simplificando o select para garantir que o join funcione corretamente, 
+    // especialmente com a referência cruzada 'payer'.
     const { data, error } = await supabase
         .from('services')
-        .select('*, client:clients(name, cpf_cnpj, phone), vehicle:vehicles(plate), payer:clients!payer_client_id(name)')
+        .select(`
+            *,
+            client:clients!client_id (name, cpf_cnpj, phone),
+            vehicle:vehicles!vehicle_id (plate),
+            payer:clients!payer_client_id (name)
+        `)
         .order('created_at', { ascending: false });
 
     if (error) throw error;
