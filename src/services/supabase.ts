@@ -384,7 +384,7 @@ export const deleteVehicle = async (vehicleId: number): Promise<void> => {
 
 export const transferVehicle = async (
     vehicle: Vehicle,
-    sellerId: number,
+    sellerId: number, // Novo: ID do cliente que está vendendo/contratando
     newOwnerId: number,
     price: number,
     dueDate: string,
@@ -468,18 +468,12 @@ export const transferVehicle = async (
 export const fetchServices = async (): Promise<Service[]> => {
     const { data, error } = await supabase
         .from('services')
-        .select(`
-            id, user_id, client_id, vehicle_id, name, status, due_date, price, created_at,
-            payer_client_id, agent_name, detran_schedule_time, contact_phone, payment_status, situation_notes,
-            client:clients(name, cpf_cnpj, phone), 
-            vehicle:vehicles(plate), 
-            payer:clients!payer_client_id(name)
-        `)
+        .select('*, client:clients(name, cpf_cnpj, phone), vehicle:vehicles(plate), payer:clients!payer_client_id(name)')
         .order('created_at', { ascending: false });
 
     if (error) throw error;
     
-    // Mapeia os dados aninhados para o formato Service
+    // Mapeia os dados aninhados para o formato ServiceWithDetails
     return data.map((s: any) => ({
         ...s,
         payer_client_name: s.payer?.name,
