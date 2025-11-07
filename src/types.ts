@@ -157,7 +157,7 @@ export interface NotificationItem {
 }
 
 // Types for Settings Page
-export type Role = 'Administrador' | 'Gerente' | 'Usuário';
+export type Role = 'Administrador' | 'Gerente' | 'Auxiliar Administrativo' | 'Usuário';
 
 export interface AppUser {
     id: string; // Will come from Supabase Auth

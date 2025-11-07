@@ -95,6 +95,15 @@ export const initialPermissions: PermissionsMap = {
         reports: true,
         settings: false,
     },
+    'Auxiliar Administrativo': {
+        dashboard: true,
+        clients: true,
+        vehicles: true,
+        services: true,
+        financial: false,
+        reports: false,
+        settings: false,
+    },
     'Usuário': {
         dashboard: true,
         clients: true,

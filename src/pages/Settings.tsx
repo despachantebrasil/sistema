@@ -138,6 +138,7 @@ const UserForm: React.FC<{
                 <label className="block text-sm font-medium text-gray-700">Perfil de Acesso</label>
                 <select value={role} onChange={e => setRole(e.target.value as Role)} className={`${inputClasses} bg-white`}>
                     <option>Usuário</option>
+                    <option>Auxiliar Administrativo</option>
                     <option>Gerente</option>
                     <option>Administrador</option>
                 </select>
