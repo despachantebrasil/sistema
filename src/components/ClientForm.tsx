@@ -75,10 +75,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     
     const checkDocumentationStatus = (data: typeof formData, type: ClientType): ClientDocStatus => {
         // 1. Campos estritamente obrigatórios para qualquer status > PENDENTE
+        // E-mail removido daqui
         const coreRequiredFields = [
             data.name,
             data.phone,
-            data.email,
             data.cpf_cnpj,
         ];
 
@@ -117,8 +117,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name || !formData.email || !formData.phone || !formData.cpf_cnpj) {
-            alert('Nome, CPF/CNPJ, e-mail e telefone são obrigatórios.');
+        // Validação ajustada: Nome, CPF/CNPJ e telefone são obrigatórios. E-mail é opcional.
+        if (!formData.name || !formData.phone || !formData.cpf_cnpj) {
+            alert('Nome, CPF/CNPJ e telefone são obrigatórios.');
             return;
         }
         
@@ -201,9 +202,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail <span className="text-red-500">*</span></label>
-                    {/* Email não deve ser forçado a maiúsculas */}
-                    <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail</label>
+                    {/* E-mail não é mais required */}
+                    <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone <span className="text-red-500">*</span></label>
