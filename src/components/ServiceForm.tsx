@@ -48,7 +48,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label htmlFor="serviceName" className="block text-sm font-medium text-gray-700">Tipo de Serviço</label>
+                <label htmlFor="serviceName" className="block text-sm font-medium text-gray-700">Tipo de Serviço <span className="text-red-500">*</span></label>
                 <select
                     id="serviceName"
                     value={serviceName}
@@ -68,7 +68,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                 </select>
             </div>
             <div>
-                <label htmlFor="client" className="block text-sm font-medium text-gray-700">Cliente</label>
+                <label htmlFor="client" className="block text-sm font-medium text-gray-700">Cliente <span className="text-red-500">*</span></label>
                 <select
                     id="client"
                     value={clientId}
@@ -87,7 +87,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                 </select>
             </div>
             <div>
-                <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700">Veículo</label>
+                <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700">Veículo <span className="text-red-500">*</span></label>
                 <select
                     id="vehicle"
                     value={vehicleId}
@@ -104,7 +104,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
             </div>
              <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Preço (R$)</label>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Preço (R$) <span className="text-red-500">*</span></label>
                     <input
                         type="number"
                         id="price"
@@ -118,7 +118,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ onSave, onCancel, clients, ve
                     />
                 </div>
                 <div>
-                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">Prazo Final</label>
+                    <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">Prazo Final <span className="text-red-500">*</span></label>
                     <input
                         type="date"
                         id="dueDate"

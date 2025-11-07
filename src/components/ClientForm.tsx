@@ -182,7 +182,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'}</label>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'} <span className="text-red-500">*</span></label>
                 <UppercaseInput type="text" name="name" id="name" value={formData.name} onChange={handleChange} required />
             </div>
 
@@ -201,17 +201,17 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail</label>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail <span className="text-red-500">*</span></label>
                     {/* Email não deve ser forçado a maiúsculas */}
                     <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone</label>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone <span className="text-red-500">*</span></label>
                     <UppercaseInput type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} required />
                 </div>
             </div>
 
-            {clientType === ClientType.INDIVIDUAL && (
+            {clientType === ClientType.INDIVIDUAL ? (
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -248,6 +248,19 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                         </div>
                     </div>
                 </>
+            ) : (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="trade_name" className="block text-sm font-medium text-gray-700">Nome Fantasia</label>
+                            <UppercaseInput type="text" name="trade_name" id="trade_name" value={formData.trade_name} onChange={handleChange} />
+                        </div>
+                        <div>
+                            <label htmlFor="contact_name" className="block text-sm font-medium text-gray-700">Nome do Contato</label>
+                            <UppercaseInput type="text" name="contact_name" id="contact_name" value={formData.contact_name} onChange={handleChange} />
+                        </div>
+                    </div>
+                </>
             )}
             
              <div>
@@ -256,8 +269,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
             <div>
-                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'}</label>
-                <UppercaseInput type="text" name="cpf_cnpj" id="cpf_cnpj" value={formData.cpf_cnpj} onChange={handleChange} />
+                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'} <span className="text-red-500">*</span></label>
+                <UppercaseInput type="text" name="cpf_cnpj" id="cpf_cnpj" value={formData.cpf_cnpj} onChange={handleChange} required />
             </div>
 
             <div className="flex justify-end space-x-3 pt-4 border-t mt-6">

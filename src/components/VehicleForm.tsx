@@ -141,15 +141,15 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             {/* Seção 1: Identificação Principal (3 colunas) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label htmlFor="plate" className="block text-sm font-medium text-gray-700">Placa</label>
+                    <label htmlFor="plate" className="block text-sm font-medium text-gray-700">Placa <span className="text-red-500">*</span></label>
                     <UppercaseInput type="text" name="plate" id="plate" value={formData.plate} onChange={handleChange} required />
                 </div>
                 <div>
-                    <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM</label>
+                    <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM <span className="text-red-500">*</span></label>
                     <UppercaseInput type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required />
                 </div>
                 <div>
-                    <label htmlFor="owner_id" className="block text-sm font-medium text-gray-700">Proprietário</label>
+                    <label htmlFor="owner_id" className="block text-sm font-medium text-gray-700">Proprietário <span className="text-red-500">*</span></label>
                     <select id="owner_id" name="owner_id" value={formData.owner_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                         <option value="" disabled>Selecione um cliente</option>
                         {clients.map((client: Client) => (
@@ -162,7 +162,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             {/* Chassi (2/3) e Potência/Cilindrada (1/3) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
-                    <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi</label>
+                    <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi <span className="text-red-500">*</span></label>
                     <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required />
                 </div>
                 <div className="md:col-span-1">
@@ -174,15 +174,15 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             {/* Seção 2: Características do Veículo (3 colunas) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Marca</label>
+                    <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Marca <span className="text-red-500">*</span></label>
                     <UppercaseInput type="text" name="brand" id="brand" value={formData.brand} onChange={handleChange} required />
                 </div>
                  <div>
-                    <label htmlFor="model" className="block text-sm font-medium text-gray-700">Modelo</label>
+                    <label htmlFor="model" className="block text-sm font-medium text-gray-700">Modelo <span className="text-red-500">*</span></label>
                     <UppercaseInput type="text" name="model" id="model" value={formData.model} onChange={handleChange} required />
                 </div>
                 <div>
-                    <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor Predominante</label>
+                    <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor Predominante <span className="text-red-500">*</span></label>
                     <UppercaseInput type="text" name="color" id="color" value={formData.color} onChange={handleChange} required />
                 </div>
             </div>
@@ -190,11 +190,11 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             {/* Seção 3: Detalhes Técnicos (3 colunas) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label htmlFor="year_manufacture" className="block text-sm font-medium text-gray-700">Ano Fab.</label>
+                    <label htmlFor="year_manufacture" className="block text-sm font-medium text-gray-700">Ano Fab. <span className="text-red-500">*</span></label>
                     <input type="number" name="year_manufacture" id="year_manufacture" value={formData.year_manufacture} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="year_model" className="block text-sm font-medium text-gray-700">Ano Mod.</label>
+                    <label htmlFor="year_model" className="block text-sm font-medium text-gray-700">Ano Mod. <span className="text-red-500">*</span></label>
                     <input type="number" name="year_model" id="year_model" value={formData.year_model} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>

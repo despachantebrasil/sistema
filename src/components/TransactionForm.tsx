@@ -79,12 +79,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSave, onCancel, tra
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700">Descrição</label>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700">Descrição <span className="text-red-500">*</span></label>
                 <UppercaseInput type="text" name="description" id="description" value={formData.description} onChange={handleChange} required disabled={isLoading} />
             </div>
             <div className="grid grid-cols-2 gap-4">
                  <div>
-                    <label htmlFor="amount" className="block text-sm font-medium text-gray-700">Valor (R$)</label>
+                    <label htmlFor="amount" className="block text-sm font-medium text-gray-700">Valor (R$) <span className="text-red-500">*</span></label>
                     <input type="number" name="amount" id="amount" value={formData.amount} onChange={handleChange} required step="0.01" min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
                 </div>
                 <div>
@@ -94,7 +94,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSave, onCancel, tra
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label htmlFor="transaction_date" className="block text-sm font-medium text-gray-700">Data da Transação</label>
+                    <label htmlFor="transaction_date" className="block text-sm font-medium text-gray-700">Data da Transação <span className="text-red-500">*</span></label>
                     <input type="date" name="transaction_date" id="transaction_date" value={formData.transaction_date} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
                 </div>
                 <div>
@@ -104,14 +104,14 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ onSave, onCancel, tra
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label htmlFor="type" className="block text-sm font-medium text-gray-700">Tipo</label>
+                    <label htmlFor="type" className="block text-sm font-medium text-gray-700">Tipo <span className="text-red-500">*</span></label>
                     <select name="type" id="type" value={formData.type} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading}>
                         <option value={TransactionType.REVENUE}>Receita</option>
                         <option value={TransactionType.EXPENSE}>Despesa</option>
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status <span className="text-red-500">*</span></label>
                     <select name="status" id="status" value={formData.status} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading}>
                         <option value={TransactionStatus.PAID}>Pago</option>
                         <option value={TransactionStatus.PENDING}>Pendente</option>
