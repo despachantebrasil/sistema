@@ -74,6 +74,14 @@ export interface Service {
   price: number;
   payer_client_id?: number; // Novo campo
   payer_client_name?: string; // Novo campo
+  
+  // Novos campos de rastreamento de transferência
+  agent_name?: string;
+  detran_schedule_time?: string;
+  contact_phone?: string;
+  payment_status?: 'Pago' | 'Pendente';
+  situation_notes?: string;
+  
   created_at: string;
 }
 

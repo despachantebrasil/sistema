@@ -384,7 +384,7 @@ export const deleteVehicle = async (vehicleId: number): Promise<void> => {
 
 export const transferVehicle = async (
     vehicle: Vehicle,
-    sellerId: number, // Novo: ID do cliente que está vendendo/contratando
+    sellerId: number,
     newOwnerId: number,
     price: number,
     dueDate: string,
