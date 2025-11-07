@@ -74,6 +74,11 @@ export interface Service {
   price: number;
   payer_client_id?: number; // Novo campo
   payer_client_name?: string; // Novo campo
+  agent_name?: string; // Novo campo: Responsável pelo processo
+  detran_schedule_time?: string; // Novo campo: Horário agendado no Detran
+  contact_phone?: string; // Novo campo: Contato do responsável
+  payment_status?: 'Pago' | 'Pendente'; // Novo campo: Status de pagamento
+  situation_notes?: string; // Novo campo: Notas sobre a situação
   created_at: string;
 }
 

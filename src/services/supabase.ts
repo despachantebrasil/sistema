@@ -525,6 +525,17 @@ export const updateService = async (serviceId: number, serviceData: ServiceUpdat
     return data as Service;
 };
 
+export const deleteService = async (serviceId: number): Promise<void> => {
+    const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', serviceId);
+
+    if (error) throw error;
+    
+    await logAction('SERVICE_DELETED', { type: 'service', id: serviceId });
+};
+
 
 // --- Transaction CRUD Operations ---
 

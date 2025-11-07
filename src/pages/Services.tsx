@@ -2,27 +2,23 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import ServiceForm from '../components/ServiceForm';
+import ServiceDetailsModal from '../components/ServiceDetailsModal'; // Novo import
 import { serviceCatalog } from '../data/mockData';
 import type { Service, Client, Vehicle, Transaction } from '../types';
 import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
-import { PlusIcon, LoaderIcon } from '../components/Icons';
-import { fetchServices, createService, fetchClients, fetchVehicles, createTransaction } from '../services/supabase';
+import { PlusIcon, LoaderIcon, MoreVerticalIcon, EditIcon, TrashIcon } from '../components/Icons';
+import { fetchServices, createService, fetchClients, fetchVehicles, createTransaction, deleteService } from '../services/supabase';
 
 const getStatusBadge = (status: ServiceStatus) => {
+    let className = 'bg-gray-100 text-gray-800';
     switch (status) {
-        case ServiceStatus.COMPLETED:
-            return 'bg-green-100 text-green-800';
-        case ServiceStatus.IN_PROGRESS:
-            return 'bg-blue-100 text-blue-800';
-        case ServiceStatus.WAITING_DOCS:
-            return 'bg-yellow-100 text-yellow-800';
-        case ServiceStatus.TODO:
-            return 'bg-gray-200 text-gray-800';
-        case ServiceStatus.CANCELED:
-            return 'bg-red-100 text-red-800';
-        default:
-            return 'bg-gray-100 text-gray-800';
+        case ServiceStatus.COMPLETED: className = 'bg-green-100 text-green-800'; break;
+        case ServiceStatus.IN_PROGRESS: className = 'bg-blue-100 text-blue-800'; break;
+        case ServiceStatus.WAITING_DOCS: className = 'bg-yellow-100 text-yellow-800'; break;
+        case ServiceStatus.CANCELED: className = 'bg-red-100 text-red-800'; break;
+        case ServiceStatus.TODO: className = 'bg-gray-200 text-gray-800'; break;
     }
+    return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${className}`}>{status}</span>;
 };
 
 // Definindo o tipo de serviço com detalhes do cliente/veículo para a tabela
@@ -32,7 +28,8 @@ const Services: React.FC = () => {
     const [services, setServices] = useState<Service[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedService, setSelectedService] = useState<ServiceWithDetails | null>(null); // Estado para detalhes/edição
     const [loading, setLoading] = useState(true);
 
     const clientMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
@@ -66,20 +63,25 @@ const Services: React.FC = () => {
             const client = clientMap.get(service.client_id || 0);
             const vehicle = vehicleMap.get(service.vehicle_id || 0);
             
-            // Mapeamento de snake_case para camelCase para o componente
             return {
-                ...service, // Inclui todas as propriedades snake_case do Supabase
+                ...service, 
                 clientName: client?.name || 'Cliente Desconhecido',
                 vehiclePlate: vehicle?.plate || 'Veículo Desconhecido',
             } as ServiceWithDetails;
         });
     }, [services, clientMap, vehicleMap]);
 
-    // O tipo de dado recebido do formulário é ServiceFormPayload (snake_case)
+    const handleOpenDetailsModal = (service: ServiceWithDetails) => {
+        setSelectedService(service);
+    };
+
+    const handleCloseDetailsModal = () => {
+        setSelectedService(null);
+    };
+
     const handleAddService = async (newServiceData: Omit<Service, 'id' | 'user_id' | 'created_at' | 'status'>) => {
         try {
             // 1. Cria o Serviço no DB
-            // Adicionando 'status' que é obrigatório na interface Service
             const servicePayload: Omit<Service, 'id' | 'user_id' | 'created_at'> = {
                 ...newServiceData,
                 status: ServiceStatus.TODO, 
@@ -103,9 +105,21 @@ const Services: React.FC = () => {
             await createTransaction(newTransactionData);
             
             await loadData(); // Recarrega a lista após salvar
-            setIsModalOpen(false);
+            setIsFormModalOpen(false);
         } catch (error) {
             throw error;
+        }
+    };
+    
+    const handleDeleteService = async (serviceId: number, serviceName: string) => {
+        if (window.confirm(`Tem certeza que deseja excluir o serviço "${serviceName}"? Esta ação é irreversível.`)) {
+            try {
+                await deleteService(serviceId);
+                await loadData();
+            } catch (error) {
+                console.error('Erro ao excluir serviço:', error);
+                alert('Não foi possível excluir o serviço.');
+            }
         }
     };
 
@@ -115,7 +129,7 @@ const Services: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                     <h2 className="text-xl font-bold">Lista de Serviços</h2>
                     <button 
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => setIsFormModalOpen(true)}
                         className="flex items-center justify-center btn-hover"
                     >
                         <PlusIcon className="w-5 h-5 mr-2" />
@@ -131,7 +145,7 @@ const Services: React.FC = () => {
                                 <th className="p-4 font-semibold">Status</th>
                                 <th className="p-4 font-semibold">Prazo</th>
                                 <th className="p-4 font-semibold">Valor</th>
-                                <th className="p-4 font-semibold">Ações</th>
+                                <th className="p-4 font-semibold text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -141,7 +155,7 @@ const Services: React.FC = () => {
                                 <tr><td colSpan={6} className="text-center p-8 text-gray-500">Nenhum serviço cadastrado.</td></tr>
                             ) : (
                                 servicesWithDetails.map((service) => (
-                                    <tr key={service.id} className="border-b hover:bg-gray-50">
+                                    <tr key={service.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => handleOpenDetailsModal(service)}>
                                         <td className="p-4 font-medium">{service.name}</td>
                                         <td className="p-4">
                                             <div>{service.clientName}</div>
@@ -153,15 +167,24 @@ const Services: React.FC = () => {
                                             )}
                                         </td>
                                         <td className="p-4">
-                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(service.status)}`}>
-                                                {service.status}
-                                            </span>
+                                            {getStatusBadge(service.status)}
                                         </td>
                                         <td className="p-4">{new Date(service.due_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
                                         <td className="p-4 font-medium">{service.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                                        <td className="p-4 space-x-2">
-                                            <button className="text-primary hover:underline">Ver</button>
-                                            <button className="text-red-500 hover:underline">Cancelar</button>
+                                        <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                            <div className="relative inline-block">
+                                                <button className="p-2 hover:bg-gray-200 rounded-full group">
+                                                    <MoreVerticalIcon className="w-5 h-5 text-gray-600" />
+                                                    <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-xl z-10 hidden group-focus-within:block">
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleOpenDetailsModal(service); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                            <EditIcon className="w-4 h-4 mr-2" /> Detalhes/Editar
+                                                        </a>
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteService(service.id, service.name); }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+                                                            <TrashIcon className="w-4 h-4 mr-2" /> Excluir
+                                                        </a>
+                                                    </div>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -171,15 +194,23 @@ const Services: React.FC = () => {
                 </div>
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Adicionar Novo Serviço">
+            <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Adicionar Novo Serviço">
                 <ServiceForm 
                     onSave={handleAddService as (service: any) => Promise<void>} 
-                    onCancel={() => setIsModalOpen(false)}
+                    onCancel={() => setIsFormModalOpen(false)}
                     clients={clients}
                     vehicles={vehicles}
                     serviceCatalog={serviceCatalog}
                 />
             </Modal>
+            
+            <ServiceDetailsModal
+                service={selectedService}
+                clients={clients}
+                vehicles={vehicles}
+                onClose={handleCloseDetailsModal}
+                onUpdate={loadData}
+            />
         </div>
     );
 };
