@@ -139,6 +139,7 @@ const Vehicles: React.FC = () => {
     };
 
     const handleConfirmTransfer = async (
+        sellerId: number, // Novo argumento
         newOwnerId: number, 
         price: number, 
         dueDate: string, 
@@ -153,6 +154,7 @@ const Vehicles: React.FC = () => {
         try {
             await transferVehicle(
                 vehicleToTransfer, 
+                sellerId, // Passando o sellerId
                 newOwnerId, 
                 price, 
                 dueDate, 

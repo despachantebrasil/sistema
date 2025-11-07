@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import type { Vehicle, Client } from '../types';
 import UppercaseInput from './ui/UppercaseInput';
 
@@ -6,6 +6,7 @@ interface VehicleTransferModalProps {
     vehicle: Vehicle & { ownerName: string };
     clients: Client[];
     onConfirm: (
+        sellerId: number, // Novo: ID do Vendedor (Cliente que contrata o serviço)
         newOwnerId: number, 
         price: number, 
         dueDate: string, 
@@ -27,6 +28,7 @@ const DetailItem: React.FC<{ label: string; value: string | number | undefined }
 );
 
 const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, clients, onConfirm, onCancel }) => {
+    const [sellerId, setSellerId] = useState<number | ''>(vehicle.owner_id); // Inicializa com o proprietário atual
     const [newOwnerId, setNewOwnerId] = useState<number | ''>('');
     const [price, setPrice] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
@@ -41,19 +43,23 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
     
     const [isLoading, setIsLoading] = useState(false);
 
-    const availableClients = useMemo(() => {
-        return clients.filter(c => c.id !== vehicle.owner_id);
-    }, [clients, vehicle.owner_id]);
+    const allClients = clients;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newOwnerId || !price || !dueDate || !payerId || !agentName) {
-            alert('Por favor, preencha todos os campos obrigatórios (Comprador, Valor, Prazo, Responsável).');
+        if (!sellerId || !newOwnerId || !price || !dueDate || !payerId || !agentName) {
+            alert('Por favor, preencha todos os campos obrigatórios (Vendedor, Comprador, Valor, Prazo, Responsável).');
             return;
         }
+        if (sellerId === newOwnerId) {
+            alert('O Vendedor e o Comprador não podem ser o mesmo cliente.');
+            return;
+        }
+        
         setIsLoading(true);
         try {
             await onConfirm(
+                Number(sellerId), // Passando o ID do Vendedor
                 Number(newOwnerId), 
                 parseFloat(price), 
                 dueDate, 
@@ -73,7 +79,10 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
     };
 
     const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
-    const disabledInputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md shadow-sm sm:text-sm";
+    
+    const currentOwner = clients.find(c => c.id === vehicle.owner_id)?.name || 'Desconhecido';
+    const selectedSellerName = clients.find(c => c.id === sellerId)?.name || 'Selecione um cliente...';
+    const selectedNewOwnerName = clients.find(c => c.id === newOwnerId)?.name || 'Selecione um cliente...';
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
@@ -83,28 +92,36 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                     <span className="font-mono bg-gray-200 text-gray-800 px-2 py-1 rounded text-sm font-semibold border">{vehicle.plate}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                    <DetailItem label="Ano" value={`${vehicle.year_manufacture}/${vehicle.year_model}`} />
-                    <DetailItem label="Cor" value={vehicle.color} />
+                    <DetailItem label="Proprietário Atual (Referência)" value={currentOwner} />
                     <DetailItem label="RENAVAM" value={vehicle.renavam} />
                     <DetailItem label="Chassi" value={vehicle.chassis} />
+                    <DetailItem label="Ano/Cor" value={`${vehicle.year_manufacture}/${vehicle.year_model} - ${vehicle.color}`} />
                 </div>
             </div>
 
             <div className="space-y-4">
                 <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Partes da Transferência</h4>
+                
                 <div>
-                    <label htmlFor="seller" className="block text-sm font-medium text-gray-700">Vendedor (Proprietário Atual)</label>
-                    <input id="seller" type="text" disabled value={vehicle.ownerName} className={disabledInputClasses} />
-                </div>
-                <div>
-                    <label htmlFor="newOwnerId" className="block text-sm font-medium text-gray-700">Comprador (Novo Proprietário)</label>
-                    <select id="newOwnerId" value={newOwnerId} onChange={(e) => setNewOwnerId(Number(e.target.value))} className={inputClasses} required disabled={isLoading}>
+                    <label htmlFor="sellerId" className="block text-sm font-medium text-gray-700">Vendedor (Cliente que Contrata o Serviço)</label>
+                    <select id="sellerId" value={sellerId} onChange={(e) => setSellerId(Number(e.target.value))} className={inputClasses} required disabled={isLoading}>
                         <option value="" disabled>Selecione um cliente...</option>
-                        {availableClients.map(client => (
+                        {allClients.map(client => (
                             <option key={client.id} value={client.id}>{client.name}</option>
                         ))}
                     </select>
                 </div>
+                
+                <div>
+                    <label htmlFor="newOwnerId" className="block text-sm font-medium text-gray-700">Comprador (Novo Proprietário)</label>
+                    <select id="newOwnerId" value={newOwnerId} onChange={(e) => setNewOwnerId(Number(e.target.value))} className={inputClasses} required disabled={isLoading}>
+                        <option value="" disabled>Selecione um cliente...</option>
+                        {allClients.filter(c => c.id !== sellerId).map(client => (
+                            <option key={client.id} value={client.id}>{client.name}</option>
+                        ))}
+                    </select>
+                </div>
+                
                 <div>
                     <label htmlFor="agentName" className="block text-sm font-medium text-gray-700">Responsável pelo Processo (Despachante)</label>
                     <UppercaseInput id="agentName" type="text" value={agentName} onChange={(e) => setAgentName(e.target.value)} required disabled={isLoading} placeholder="Nome do despachante ou empresa" />
@@ -145,13 +162,13 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                         <label className="block text-sm font-medium text-gray-700">Quem pagará pelo serviço?</label>
                         <div className="mt-2 flex items-center space-x-4">
                             <label className="flex items-center">
-                                <input type="radio" name="payer" value={vehicle.owner_id} checked={payerId === vehicle.owner_id} onChange={() => setPayerId(vehicle.owner_id)} className="h-4 w-4 text-primary focus:ring-primary-dark" />
-                                <span className="ml-2 text-sm">Vendedor ({vehicle.ownerName})</span>
+                                <input type="radio" name="payer" value={sellerId} checked={payerId === sellerId} onChange={() => setPayerId(Number(sellerId))} className="h-4 w-4 text-primary focus:ring-primary-dark" disabled={!sellerId} />
+                                <span className="ml-2 text-sm">Vendedor ({selectedSellerName})</span>
                             </label>
                             {newOwnerId && (
                                 <label className="flex items-center">
-                                    <input type="radio" name="payer" value={newOwnerId} checked={payerId === newOwnerId} onChange={() => setPayerId(newOwnerId)} className="h-4 w-4 text-primary focus:ring-primary-dark" />
-                                    <span className="ml-2 text-sm">Comprador ({clients.find(c => c.id === newOwnerId)?.name})</span>
+                                    <input type="radio" name="payer" value={newOwnerId} checked={payerId === newOwnerId} onChange={() => setPayerId(Number(newOwnerId))} className="h-4 w-4 text-primary focus:ring-primary-dark" />
+                                    <span className="ml-2 text-sm">Comprador ({selectedNewOwnerName})</span>
                                 </label>
                             )}
                         </div>

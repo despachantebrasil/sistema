@@ -384,6 +384,7 @@ export const deleteVehicle = async (vehicleId: number): Promise<void> => {
 
 export const transferVehicle = async (
     vehicle: Vehicle,
+    sellerId: number, // Novo: ID do cliente que está vendendo/contratando
     newOwnerId: number,
     price: number,
     dueDate: string,
@@ -401,7 +402,7 @@ export const transferVehicle = async (
     // 1. Create the transfer service
     const servicePayload = {
         user_id: userId,
-        client_id: vehicle.owner_id, // The service is for the original owner
+        client_id: sellerId, // O serviço é criado em nome do VENDEDOR
         vehicle_id: vehicle.id,
         name: 'Transferência de Propriedade',
         status: ServiceStatus.TODO,
@@ -454,6 +455,7 @@ export const transferVehicle = async (
     // 4. Log the action
     await logAction('VEHICLE_TRANSFERRED', { type: 'vehicle', id: vehicle.id }, {
         from_owner_id: vehicle.owner_id,
+        seller_id: sellerId,
         to_owner_id: newOwnerId,
         service_id: newService.id,
         agent: agentName,
