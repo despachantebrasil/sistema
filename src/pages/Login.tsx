@@ -38,7 +38,7 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-xl shadow-lg">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-primary">
-            URTECH<span className="text-secondary"> DESPACHANTES</span>
+            ONEKER<span className="text-secondary"> DESPACHANTES</span>
           </h1>
           <p className="mt-2 text-medium-text">Acesse sua conta para continuar</p>
         </div>

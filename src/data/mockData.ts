@@ -116,7 +116,7 @@ export const initialPermissions: PermissionsMap = {
 };
 
 export const mockCompanyProfile: CompanyProfile = {
-    name: 'URTECH Despachantes & Cia Ltda',
+    name: 'ONEKER Despachantes & Cia Ltda',
     cnpj: '12.345.678/0001-99',
     phone: '(11) 5555-1234',
     address: 'Avenida Principal, 789',

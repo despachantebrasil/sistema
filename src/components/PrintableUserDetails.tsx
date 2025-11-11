@@ -26,7 +26,7 @@ export const PrintableUserDetails: React.FC<{ user: AppUser }> = ({ user }) => {
                 </div>
             </div>
             
-            <p className="text-xs text-gray-500 pt-4 border-t">Usuário do sistema URTECH DESPACHANTES</p>
+            <p className="text-xs text-gray-500 pt-4 border-t">Usuário do sistema ONEKER DESPACHANTES</p>
         </div>
     );
 };

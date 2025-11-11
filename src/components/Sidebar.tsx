@@ -78,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, userRole
       fixed h-full w-64 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
     >
       <div className="text-xl font-bold text-center py-6 border-b border-primary-dark">
-        URTECH<span className="text-secondary"> DESPACHANTES</span>
+        ONEKER<span className="text-secondary"> DESPACHANTES</span>
       </div>
       <nav className="mt-8">
         <ul>
@@ -95,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, userRole
         </ul>
       </nav>
       <div className="mt-auto p-4 text-center text-sm text-gray-300">
-        <p>&copy; 2025 URTECH DESPACHANTES</p>
+        <p>&copy; 2025 ONEKER DESPACHANTES</p>
         <p>v1.0.0</p>
       </div>
     </aside>
