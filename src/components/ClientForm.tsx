@@ -75,7 +75,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     
     const checkDocumentationStatus = (data: typeof formData, type: ClientType): ClientDocStatus => {
         // 1. Campos estritamente obrigatórios para qualquer status > PENDENTE
-        // E-mail removido daqui
         const coreRequiredFields = [
             data.name,
             data.phone,
@@ -91,7 +90,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
         let detailFields: (string | number | undefined)[] = [data.address];
 
         if (type === ClientType.INDIVIDUAL) {
-            // CNH não é mais obrigatória para COMPLETED
+            // CNH e Vencimento CNH são opcionais e não contam para o status COMPLETED
             detailFields = detailFields.concat([
                 data.marital_status,
                 data.profession,
@@ -117,7 +116,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Validação ajustada: Nome, CPF/CNPJ e telefone são obrigatórios. E-mail é opcional.
+        // Validação ajustada: Nome, CPF/CNPJ e telefone são obrigatórios.
         if (!formData.name || !formData.phone || !formData.cpf_cnpj) {
             alert('Nome, CPF/CNPJ e telefone são obrigatórios.');
             return;
@@ -241,10 +240,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="cnh_number" className="block text-sm font-medium text-gray-700">Nº Registro CNH</label>
+                            {/* Removido 'required' */}
                             <UppercaseInput type="text" name="cnh_number" id="cnh_number" value={formData.cnh_number} onChange={handleChange} />
                         </div>
                         <div>
                             <label htmlFor="cnh_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento CNH</label>
+                            {/* Removido 'required' */}
                             <input type="date" name="cnh_expiration_date" id="cnh_expiration_date" value={formData.cnh_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                         </div>
                     </div>
