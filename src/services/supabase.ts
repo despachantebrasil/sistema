@@ -2,6 +2,22 @@ import { supabase } from '../integrations/supabase/client';
 import type { AppUser, Role, Client, Vehicle, Service, Transaction, AuditLog, Document, ServiceChecklistItem } from '../types';
 import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
 
+// --- Helper Function to get Company ID ---
+const getCompanyId = async (userId: string): Promise<string> => {
+    const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', userId)
+        .single();
+    
+    if (error || !profile || !profile.company_id) {
+        console.error('Could not fetch company_id for user:', userId, error);
+        throw new Error('Não foi possível identificar a empresa do usuário.');
+    }
+    return profile.company_id;
+};
+
+
 // --- Audit Log Functions ---
 
 /**
@@ -20,6 +36,7 @@ export const logAction = async (
         console.warn('LogAction chamada sem um usuário autenticado.');
         return;
     }
+    const companyId = await getCompanyId(user.id);
 
     const { error } = await supabase.from('audit_log').insert({
         user_id: user.id,
@@ -27,6 +44,7 @@ export const logAction = async (
         entity_type: entityInfo.type,
         entity_id: String(entityInfo.id),
         details: details || {},
+        company_id: companyId,
     });
 
     if (error) {
@@ -185,6 +203,7 @@ export const createClient = async (clientData: ClientPayload, avatarFile: File |
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
+    const companyId = await getCompanyId(userId);
 
     let avatar_url = clientData.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(clientData.name)}&background=0D47A1&color=fff`;
 
@@ -207,6 +226,7 @@ export const createClient = async (clientData: ClientPayload, avatarFile: File |
     const payload = {
         ...clientData,
         user_id: userId,
+        company_id: companyId,
         doc_status: clientData.doc_status, 
         avatar_url,
     };
@@ -288,6 +308,7 @@ export const createVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'user_id' 
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
+    const companyId = await getCompanyId(userId);
     
     const imageUrls: string[] = [];
 
@@ -310,6 +331,7 @@ export const createVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'user_id' 
     const payload = {
         ...vehicleData,
         user_id: userId,
+        company_id: companyId,
         image_urls: imageUrls,
     };
 
@@ -399,10 +421,12 @@ export const transferVehicle = async (
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
+    const companyId = await getCompanyId(userId);
 
     // 1. Create the transfer service
     const servicePayload = {
         user_id: userId,
+        company_id: companyId,
         client_id: sellerId, // O serviço é criado em nome do VENDEDOR
         vehicle_id: vehicle.id,
         name: 'Transferência de Propriedade',
@@ -429,6 +453,7 @@ export const transferVehicle = async (
     const transactionDescription = `Serviço: Transferência de Propriedade - ${vehicle.plate}${agentName ? ` (Resp: ${agentName})` : ''}`;
     const transactionPayload = {
         user_id: userId,
+        company_id: companyId,
         description: transactionDescription,
         category: 'Receita de Serviço',
         transaction_date: new Date().toISOString().split('T')[0],
@@ -497,10 +522,12 @@ export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' 
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
+    const companyId = await getCompanyId(userId);
 
     const payload = {
         ...serviceData,
         user_id: userId,
+        company_id: companyId,
         status: ServiceStatus.TODO,
     };
 
@@ -580,10 +607,12 @@ export const createTransaction = async (transactionData: Omit<Transaction, 'id' 
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
+    const companyId = await getCompanyId(userId);
 
     const payload = {
         ...transactionData,
         user_id: userId,
+        company_id: companyId,
     };
 
     const { data, error } = await supabase
@@ -713,6 +742,7 @@ export const uploadDocument = async (
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
     const userId = user.data.user.id;
+    const companyId = await getCompanyId(userId);
 
     const filePath = `${userId}/${entityType}s/${entityId}/${Date.now()}_${file.name}`;
     
@@ -724,6 +754,7 @@ export const uploadDocument = async (
 
     const payload = {
         user_id: userId,
+        company_id: companyId,
         client_id: entityType === 'client' ? entityId : undefined,
         vehicle_id: entityType === 'vehicle' ? entityId : undefined,
         document_type: documentType,
