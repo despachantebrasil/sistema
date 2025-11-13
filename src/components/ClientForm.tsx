@@ -74,23 +74,30 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     };
     
     const checkDocumentationStatus = (data: typeof formData, type: ClientType): ClientDocStatus => {
-        // 1. Campos estritamente obrigatórios para qualquer status > PENDENTE
-        const coreRequiredFields = [
-            data.name,
-            data.phone,
-            data.cpf_cnpj,
-        ];
+        // Campos principais para Pessoa Física
+        let coreRequiredFields: (string | number | undefined)[] = [];
+        
+        if (type === ClientType.INDIVIDUAL) {
+            coreRequiredFields = [data.name, data.phone, data.cpf_cnpj];
+        } else {
+            // Para Pessoa Jurídica, se todos os campos estiverem vazios, é PENDENTE.
+            // Se houver pelo menos o nome, é EM ANDAMENTO.
+            // Se todos os campos de detalhe estiverem preenchidos, é COMPLETO.
+            coreRequiredFields = [data.name, data.cpf_cnpj, data.phone];
+        }
 
-        // Se algum campo principal estiver faltando, o status é PENDENTE
-        if (coreRequiredFields.some(field => !field || field.trim() === '')) {
-            return ClientDocStatus.PENDING;
+        // Se algum campo principal (para PF) ou se todos os campos (para PJ) estiverem faltando, o status é PENDENTE
+        if (coreRequiredFields.every(field => !field || (typeof field === 'string' && field.trim() === ''))) {
+             // Se for PJ e tudo estiver vazio, é PENDENTE.
+             if (type === ClientType.COMPANY) return ClientDocStatus.PENDING;
+             // Se for PF e faltar algum core, é PENDENTE.
+             if (coreRequiredFields.some(field => !field || (typeof field === 'string' && field.trim() === ''))) return ClientDocStatus.PENDING;
         }
         
         // 2. Campos de detalhe para status COMPLETO
         let detailFields: (string | number | undefined)[] = [data.address];
 
         if (type === ClientType.INDIVIDUAL) {
-            // CNH e Vencimento CNH são opcionais e não contam para o status COMPLETED
             detailFields = detailFields.concat([
                 data.marital_status,
                 data.profession,
@@ -98,7 +105,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                 data.naturalness,
             ]);
         } else if (type === ClientType.COMPANY) {
+            // Para PJ, os campos principais também contam como detalhes para atingir COMPLETED
             detailFields = detailFields.concat([
+                data.name,
+                data.cpf_cnpj,
+                data.phone,
                 data.trade_name,
                 data.contact_name,
             ]);
@@ -116,11 +127,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Validação ajustada: Nome, CPF/CNPJ e telefone são obrigatórios.
-        if (!formData.name || !formData.phone || !formData.cpf_cnpj) {
-            alert('Nome, CPF/CNPJ e telefone são obrigatórios.');
+        
+        // Validação mínima para Pessoa Física
+        if (clientType === ClientType.INDIVIDUAL && (!formData.name || !formData.phone || !formData.cpf_cnpj)) {
+            alert('Para Pessoa Física, Nome, CPF e Telefone são obrigatórios.');
             return;
         }
+        
+        // Para Pessoa Jurídica, permitimos salvar mesmo que todos os campos estejam vazios.
         
         setIsLoading(true);
 
@@ -150,6 +164,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     };
 
     const maritalStatusOptions = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'Outro'];
+    
+    // Função auxiliar para determinar se o campo é obrigatório (apenas para PF)
+    const isRequired = () => clientType === ClientType.INDIVIDUAL;
+    
+    // Função auxiliar para renderizar o asterisco
+    const renderRequiredStar = () => isRequired() ? <span className="text-red-500">*</span> : null;
+
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
@@ -182,8 +203,15 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'} <span className="text-red-500">*</span></label>
-                <UppercaseInput type="text" name="name" id="name" value={formData.name} onChange={handleChange} required />
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'} {renderRequiredStar()}</label>
+                <UppercaseInput 
+                    type="text" 
+                    name="name" 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                    required={isRequired()} 
+                />
             </div>
 
             {clientType === ClientType.COMPANY && (
@@ -206,8 +234,15 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                     <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone <span className="text-red-500">*</span></label>
-                    <UppercaseInput type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} required />
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone {renderRequiredStar()}</label>
+                    <UppercaseInput 
+                        type="tel" 
+                        name="phone" 
+                        id="phone" 
+                        value={formData.phone} 
+                        onChange={handleChange} 
+                        required={isRequired()} 
+                    />
                 </div>
             </div>
 
@@ -271,8 +306,15 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
             <div>
-                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'} <span className="text-red-500">*</span></label>
-                <UppercaseInput type="text" name="cpf_cnpj" id="cpf_cnpj" value={formData.cpf_cnpj} onChange={handleChange} required />
+                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'} {renderRequiredStar()}</label>
+                <UppercaseInput 
+                    type="text" 
+                    name="cpf_cnpj" 
+                    id="cpf_cnpj" 
+                    value={formData.cpf_cnpj} 
+                    onChange={handleChange} 
+                    required={isRequired()} 
+                />
             </div>
 
             <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
