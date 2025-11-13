@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import type { Vehicle, AuditLog } from '../types';
+import type { Vehicle, AuditLog, Document } from '../types';
 import Modal from './ui/Modal';
 import { PrinterIcon, ClockIcon, LoaderIcon } from './Icons';
-import { fetchAuditLogsForEntity } from '../services/supabase';
+import { fetchAuditLogsForEntity, fetchDocuments } from '../services/supabase';
+import DocumentManager from './DocumentManager';
 
 interface VehicleWithDetails extends Vehicle {
     ownerName: string;
@@ -76,23 +77,28 @@ export const PrintableVehicleDetails: React.FC<{ vehicle: VehicleWithDetails }> 
 
 const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onClose, onPrint }) => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loadingLogs, setLoadingLogs] = useState(true);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+      if (!vehicle) return;
+      setLoading(true);
+      try {
+          const [logData, docData] = await Promise.all([
+              fetchAuditLogsForEntity('vehicle', vehicle.id),
+              fetchDocuments({ vehicleId: vehicle.id })
+          ]);
+          setLogs(logData);
+          setDocuments(docData);
+      } catch (error) {
+          console.error("Falha ao carregar dados do modal", error);
+      } finally {
+          setLoading(false);
+      }
+  };
 
   useEffect(() => {
-    if (vehicle) {
-        const loadLogs = async () => {
-            setLoadingLogs(true);
-            try {
-                const logData = await fetchAuditLogsForEntity('vehicle', vehicle.id);
-                setLogs(logData);
-            } catch (error) {
-                console.error("Falha ao carregar logs de auditoria", error);
-            } finally {
-                setLoadingLogs(false);
-            }
-        };
-        loadLogs();
-    }
+    loadData();
   }, [vehicle]);
 
   if (!vehicle) return null;
@@ -102,9 +108,16 @@ const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onCl
       <div className="max-h-[70vh] overflow-y-auto pr-4">
         <PrintableVehicleDetails vehicle={vehicle} />
 
+        <DocumentManager 
+            documents={documents}
+            entityId={vehicle.id}
+            entityType="vehicle"
+            onUpdate={loadData}
+        />
+
         <div className="mt-6">
             <h2 className="text-xl font-semibold text-primary border-b pb-2">Histórico de Rastreabilidade</h2>
-            {loadingLogs ? (
+            {loading ? (
                 <div className="text-center p-4"><LoaderIcon className="w-5 h-5 inline mr-2" /> Carregando histórico...</div>
             ) : logs.length > 0 ? (
                 <div className="space-y-4 mt-4">

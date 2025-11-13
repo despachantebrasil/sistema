@@ -1,5 +1,5 @@
 import { supabase } from '../integrations/supabase/client';
-import type { AppUser, Role, Client, Vehicle, Service, Transaction, AuditLog } from '../types';
+import type { AppUser, Role, Client, Vehicle, Service, Transaction, AuditLog, Document, ServiceChecklistItem } from '../types';
 import { ServiceStatus, TransactionType, TransactionStatus } from '../types';
 
 // --- Audit Log Functions ---
@@ -512,6 +512,24 @@ export const createService = async (serviceData: Omit<Service, 'id' | 'user_id' 
 
     if (error) throw error;
     
+    // Após criar o serviço, cria o checklist a partir do template
+    const { data: template } = await supabase
+        .from('checklist_templates')
+        .select('tasks')
+        .eq('service_name', data.name)
+        .single();
+
+    if (template && template.tasks) {
+        const checklistItems = (template.tasks as string[]).map((task, index) => ({
+            service_id: data.id,
+            task_description: task,
+            order: index + 1,
+        }));
+        
+        const { error: checklistError } = await supabase.from('service_checklist_items').insert(checklistItems);
+        if (checklistError) console.error("Erro ao criar checklist para o serviço:", checklistError);
+    }
+    
     await logAction('SERVICE_CREATED', { type: 'service', id: data.id }, { name: data.name, client_id: data.client_id, vehicle_id: data.vehicle_id });
 
     return data as Service;
@@ -658,4 +676,93 @@ export const fetchDashboardKpis = async () => {
         clients: clients || [],
         vehicles: vehicles || [],
     };
+};
+
+// --- NOVAS FUNÇÕES ---
+
+// --- Document Management ---
+export const fetchDocuments = async (
+    { clientId, vehicleId }: { clientId?: number; vehicleId?: number }
+): Promise<Document[]> => {
+    let query = supabase.from('documents').select('*');
+    if (clientId) {
+        query = query.eq('client_id', clientId);
+    }
+    if (vehicleId) {
+        query = query.eq('vehicle_id', vehicleId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) throw error;
+
+    // Adiciona a URL pública a cada documento
+    const documentsWithUrls = data.map(doc => {
+        const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(doc.storage_path);
+        return { ...doc, publicUrl };
+    });
+
+    return documentsWithUrls as Document[];
+};
+
+export const uploadDocument = async (
+    file: File,
+    documentType: string,
+    entityId: number,
+    entityType: 'client' | 'vehicle'
+): Promise<void> => {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) throw new Error("Usuário não autenticado.");
+    const userId = user.data.user.id;
+
+    const filePath = `${userId}/${entityType}s/${entityId}/${Date.now()}_${file.name}`;
+    
+    const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const payload = {
+        user_id: userId,
+        client_id: entityType === 'client' ? entityId : undefined,
+        vehicle_id: entityType === 'vehicle' ? entityId : undefined,
+        document_type: documentType,
+        file_name: file.name,
+        storage_path: filePath,
+    };
+
+    const { error: insertError } = await supabase.from('documents').insert(payload);
+    if (insertError) throw insertError;
+};
+
+export const deleteDocument = async (doc: Document): Promise<void> => {
+    const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([doc.storage_path]);
+    
+    if (storageError) throw storageError;
+
+    const { error: dbError } = await supabase.from('documents').delete().eq('id', doc.id);
+    if (dbError) throw dbError;
+};
+
+// --- Service Checklist Management ---
+export const fetchChecklistForService = async (serviceId: number): Promise<ServiceChecklistItem[]> => {
+    const { data, error } = await supabase
+        .from('service_checklist_items')
+        .select('*')
+        .eq('service_id', serviceId)
+        .order('order', { ascending: true });
+    
+    if (error) throw error;
+    return data as ServiceChecklistItem[];
+};
+
+export const updateChecklistItem = async (itemId: number, isCompleted: boolean): Promise<void> => {
+    const { error } = await supabase
+        .from('service_checklist_items')
+        .update({ is_completed: isCompleted })
+        .eq('id', itemId);
+        
+    if (error) throw error;
 };

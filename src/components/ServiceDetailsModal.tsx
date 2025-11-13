@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './ui/Modal';
-import { updateService } from '../services/supabase';
-import type { Service, Client, Vehicle } from '../types';
+import { updateService, fetchChecklistForService } from '../services/supabase';
+import type { Service, Client, Vehicle, ServiceChecklistItem } from '../types';
 import { ServiceStatus } from '../types';
 import { LoaderIcon, EditIcon, PrinterIcon } from './Icons';
+import ServiceChecklist from './ServiceChecklist';
 
 interface ServiceDetailsModalProps {
     service: (Service & { clientName: string; vehiclePlate: string }) | null;
@@ -29,6 +30,7 @@ const DetailItem: React.FC<DetailItemProps> = ({ label, value, className = '' })
 const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clients, vehicles, onClose, onUpdate }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentStatus, setCurrentStatus] = useState<ServiceStatus | undefined>(service?.status);
+    const [checklistItems, setChecklistItems] = useState<ServiceChecklistItem[]>([]);
     const [formData, setFormData] = useState({
         agent_name: '',
         detran_schedule_date: '',
@@ -40,6 +42,17 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
         next_schedule_time: '',
     });
     const [isLoading, setIsLoading] = useState(false);
+
+    const loadChecklist = async () => {
+        if (service) {
+            try {
+                const items = await fetchChecklistForService(service.id);
+                setChecklistItems(items);
+            } catch (error) {
+                console.error("Erro ao carregar checklist:", error);
+            }
+        }
+    };
 
     useEffect(() => {
         if (service) {
@@ -57,6 +70,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                 next_schedule_time: nextTimePart?.trim() || '',
             });
             setIsEditing(false);
+            loadChecklist();
         }
     }, [service]);
 
@@ -239,6 +253,8 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                         </div>
                     )}
                 </div>
+                
+                <ServiceChecklist items={checklistItems} onUpdate={loadChecklist} />
                 
                 <div className="border p-4 rounded-lg">
                     <h4 className="font-semibold text-lg text-primary mb-3">Referências</h4>

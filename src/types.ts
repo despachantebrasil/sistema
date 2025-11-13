@@ -59,10 +59,6 @@ export interface Vehicle {
   created_at: string;
 }
 
-// Novo tipo para os dados extraídos do documento do veículo
-// REMOVIDO: export type ExtractedVehicleData = Partial<Omit<Vehicle, 'id' | 'user_id' | 'owner_id' | 'created_at' | 'image_urls'>>;
-
-
 export interface Service {
   id: number;
   user_id: string; // Chave estrangeira para auth.users
@@ -195,4 +191,25 @@ export interface AuditLog {
   details: any;
   user_full_name: string;
   user_email: string;
+}
+
+// --- NOVOS TIPOS ---
+export interface Document {
+  id: string;
+  created_at: string;
+  user_id: string;
+  client_id?: number;
+  vehicle_id?: number;
+  document_type: string;
+  file_name: string;
+  storage_path: string;
+  publicUrl?: string;
+}
+
+export interface ServiceChecklistItem {
+  id: number;
+  service_id: number;
+  task_description: string;
+  is_completed: boolean;
+  order: number;
 }
