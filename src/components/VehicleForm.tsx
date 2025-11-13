@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Vehicle, Client } from '../types';
 import { CameraIcon, CloseIcon } from './Icons';
 import UppercaseInput from './ui/UppercaseInput';
@@ -9,7 +9,8 @@ interface VehicleFormProps {
         imageFiles: File[], 
         isEditing: boolean, 
         vehicleId?: number,
-        existingImageUrls?: string[] // Adicionado o quinto argumento
+        existingImageUrls?: string[],
+        shouldClose?: boolean // Novo argumento para controlar o fechamento
     ) => Promise<void>;
     onCancel: () => void;
     clients: Client[];
@@ -19,7 +20,7 @@ interface VehicleFormProps {
 const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, vehicle }) => {
     const isEditing = !!vehicle;
     
-    const [formData, setFormData] = useState({
+    const initialFormData = {
         plate: vehicle?.plate || '',
         chassis: vehicle?.chassis || '',
         renavam: vehicle?.renavam || '',
@@ -31,16 +32,18 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         fuel_type: vehicle?.fuel_type || '',
         owner_id: vehicle?.owner_id || '',
         licensing_expiration_date: vehicle?.licensing_expiration_date || '',
-        category: vehicle?.category || '', // Novo campo
-        capacity_power_cc: vehicle?.capacity_power_cc || '', // Novo campo
-    });
+        category: vehicle?.category || '',
+        capacity_power_cc: vehicle?.capacity_power_cc || '',
+    };
+
+    const [formData, setFormData] = useState(initialFormData);
     const [imageFiles, setImageFiles] = useState<File[]>([]);
-    // imagePreviews agora armazena URLs de blob (novas) e URLs de string (existentes)
     const [imagePreviews, setImagePreviews] = useState<string[]>(vehicle?.image_urls || []);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (vehicle) {
+            setFormData(initialFormData);
             setImagePreviews(vehicle.image_urls || []);
         }
     }, [vehicle]);
@@ -84,9 +87,33 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
         }
         // Se não for uma URL de blob, é uma URL existente que será excluída do array image_urls no DB.
     };
+    
+    const resetForm = useCallback(() => {
+        // Revoga URLs de blob antigas
+        imagePreviews.forEach((url: string) => {
+            if(url.startsWith('blob:')) URL.revokeObjectURL(url)
+        });
+        
+        // Mantém apenas o owner_id e reseta o resto
+        setFormData(prev => ({
+            ...initialFormData,
+            owner_id: prev.owner_id, // Mantém o proprietário selecionado
+            plate: '',
+            chassis: '',
+            renavam: '',
+            brand: '',
+            model: '',
+            color: '',
+            fuel_type: '',
+            licensing_expiration_date: '',
+            category: '',
+            capacity_power_cc: '',
+        }));
+        setImageFiles([]);
+        setImagePreviews([]);
+    }, [imagePreviews, initialFormData]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSave = async (shouldClose: boolean) => {
         if (!formData.owner_id) {
             alert('Por favor, selecione um proprietário válido.');
             return;
@@ -103,29 +130,42 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 year_manufacture: Number(formData.year_manufacture),
                 year_model: Number(formData.year_model),
                 owner_id: Number(formData.owner_id),
-                // image_urls é tratado na função onSave/updateVehicle
             };
 
             await onSave(
                 vehicleDataToSave as Omit<Vehicle, 'id' | 'user_id' | 'created_at'>, 
                 imageFiles, 
                 isEditing, 
-                isEditing ? vehicle!.id : undefined, // Usando 'vehicle!' pois isEditing garante que vehicle existe
-                existingImageUrls // Passa as URLs existentes que devem ser mantidas
+                isEditing ? vehicle!.id : undefined,
+                existingImageUrls,
+                shouldClose // Passa a instrução de fechamento
             );
             
-            // Limpa URLs de blob criadas localmente
-            imagePreviews.forEach((url: string) => {
-                if(url.startsWith('blob:')) URL.revokeObjectURL(url)
-            });
-            
-            onCancel();
+            if (shouldClose) {
+                // Limpa URLs de blob criadas localmente
+                imagePreviews.forEach((url: string) => {
+                    if(url.startsWith('blob:')) URL.revokeObjectURL(url)
+                });
+                onCancel();
+            } else {
+                resetForm();
+            }
         } catch (error) {
             console.error("Erro ao salvar veículo:", error);
             alert('Erro ao salvar veículo. Verifique o console para mais detalhes.');
         } finally {
             setIsLoading(false);
         }
+    };
+    
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        handleSave(true); // Padrão: Salvar e Fechar
+    };
+    
+    const handleSaveAndAddAnother = (e: React.MouseEvent) => {
+        e.preventDefault();
+        handleSave(false); // Salvar e Manter Aberto
     };
     
     const fuelTypeOptions = [
@@ -142,15 +182,15 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="plate" className="block text-sm font-medium text-gray-700">Placa <span className="text-red-500">*</span></label>
-                    <UppercaseInput type="text" name="plate" id="plate" value={formData.plate} onChange={handleChange} required />
+                    <UppercaseInput type="text" name="plate" id="plate" value={formData.plate} onChange={handleChange} required disabled={isLoading} />
                 </div>
                 <div>
                     <label htmlFor="renavam" className="block text-sm font-medium text-gray-700">RENAVAM <span className="text-red-500">*</span></label>
-                    <UppercaseInput type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required />
+                    <UppercaseInput type="text" name="renavam" id="renavam" value={formData.renavam} onChange={handleChange} required disabled={isLoading} />
                 </div>
                 <div>
                     <label htmlFor="owner_id" className="block text-sm font-medium text-gray-700">Proprietário <span className="text-red-500">*</span></label>
-                    <select id="owner_id" name="owner_id" value={formData.owner_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                    <select id="owner_id" name="owner_id" value={formData.owner_id} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading || isEditing}>
                         <option value="" disabled>Selecione um cliente</option>
                         {clients.map((client: Client) => (
                             <option key={client.id} value={client.id}>{client.name}</option>
@@ -163,11 +203,11 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
                     <label htmlFor="chassis" className="block text-sm font-medium text-gray-700">Chassi <span className="text-red-500">*</span></label>
-                    <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required />
+                    <UppercaseInput type="text" name="chassis" id="chassis" value={formData.chassis} onChange={handleChange} required disabled={isLoading} />
                 </div>
                 <div className="md:col-span-1">
                     <label htmlFor="capacity_power_cc" className="block text-sm font-medium text-gray-700">Potência/Cilindrada</label>
-                    <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="EX: 100 CV / 1000 CC" />
+                    <UppercaseInput type="text" name="capacity_power_cc" id="capacity_power_cc" value={formData.capacity_power_cc} onChange={handleChange} placeholder="EX: 100 CV / 1000 CC" disabled={isLoading} />
                 </div>
             </div>
 
@@ -175,15 +215,15 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="brand" className="block text-sm font-medium text-gray-700">Marca <span className="text-red-500">*</span></label>
-                    <UppercaseInput type="text" name="brand" id="brand" value={formData.brand} onChange={handleChange} required />
+                    <UppercaseInput type="text" name="brand" id="brand" value={formData.brand} onChange={handleChange} required disabled={isLoading} />
                 </div>
                  <div>
                     <label htmlFor="model" className="block text-sm font-medium text-gray-700">Modelo <span className="text-red-500">*</span></label>
-                    <UppercaseInput type="text" name="model" id="model" value={formData.model} onChange={handleChange} required />
+                    <UppercaseInput type="text" name="model" id="model" value={formData.model} onChange={handleChange} required disabled={isLoading} />
                 </div>
                 <div>
                     <label htmlFor="color" className="block text-sm font-medium text-gray-700">Cor Predominante <span className="text-red-500">*</span></label>
-                    <UppercaseInput type="text" name="color" id="color" value={formData.color} onChange={handleChange} required />
+                    <UppercaseInput type="text" name="color" id="color" value={formData.color} onChange={handleChange} required disabled={isLoading} />
                 </div>
             </div>
 
@@ -191,15 +231,15 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label htmlFor="year_manufacture" className="block text-sm font-medium text-gray-700">Ano Fab. <span className="text-red-500">*</span></label>
-                    <input type="number" name="year_manufacture" id="year_manufacture" value={formData.year_manufacture} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <input type="number" name="year_manufacture" id="year_manufacture" value={formData.year_manufacture} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
                 </div>
                 <div>
                     <label htmlFor="year_model" className="block text-sm font-medium text-gray-700">Ano Mod. <span className="text-red-500">*</span></label>
-                    <input type="number" name="year_model" id="year_model" value={formData.year_model} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <input type="number" name="year_model" id="year_model" value={formData.year_model} onChange={handleChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
                 </div>
                 <div>
                     <label htmlFor="fuel_type" className="block text-sm font-medium text-gray-700">Combustível</label>
-                    <select id="fuel_type" name="fuel_type" value={formData.fuel_type} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                    <select id="fuel_type" name="fuel_type" value={formData.fuel_type} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading}>
                         <option value="">Selecione...</option>
                         {fuelTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}
                     </select>
@@ -210,14 +250,14 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoria</label>
-                    <select id="category" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                    <select id="category" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading}>
                         <option value="">Selecione...</option>
                         {categoryOptions.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
                 <div>
                     <label htmlFor="licensing_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento Licenciamento</label>
-                    <input type="date" name="licensing_expiration_date" id="licensing_expiration_date" value={formData.licensing_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                    <input type="date" name="licensing_expiration_date" id="licensing_expiration_date" value={formData.licensing_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
                 </div>
             </div>
 
@@ -231,7 +271,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                             <div className="flex text-sm text-gray-600">
                                 <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none">
                                     <span>Carregar arquivos</span>
-                                    <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple accept="image/*" onChange={handleImageChange} disabled={imagePreviews.length >= 4} />
+                                    <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple accept="image/*" onChange={handleImageChange} disabled={imagePreviews.length >= 4 || isLoading} />
                                  </label>
                             </div>
                             <p className="text-xs text-gray-500">{4 - imagePreviews.length} foto(s) restante(s)</p>
@@ -244,7 +284,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                             <div key={index} className="relative group">
                                 <img src={preview} alt={`Preview ${index + 1}`} className="h-24 w-full object-cover rounded-md" />
                                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center transition-opacity">
-                                    <button type="button" onClick={() => handleRemoveImage(index)} className="opacity-0 group-hover:opacity-100 bg-red-600 text-white rounded-full p-1 leading-none transition-opacity">
+                                    <button type="button" onClick={() => handleRemoveImage(index)} className="opacity-0 group-hover:opacity-100 bg-red-600 text-white rounded-full p-1 leading-none transition-opacity" disabled={isLoading}>
                                         <CloseIcon className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -258,6 +298,11 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300" disabled={isLoading}>
                     Cancelar
                 </button>
+                {!isEditing && (
+                    <button type="button" onClick={handleSaveAndAddAnother} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold" disabled={isLoading}>
+                        {isLoading ? 'Salvando...' : 'Salvar e Adicionar Outro'}
+                    </button>
+                )}
                 <button type="submit" className="btn-scale" disabled={isLoading}>
                     {isLoading ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Salvar Veículo')}
                 </button>

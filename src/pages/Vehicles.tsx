@@ -103,7 +103,8 @@ const Vehicles: React.FC = () => {
         imageFiles: File[], 
         isEditing: boolean, 
         vehicleId?: number,
-        existingImageUrls?: string[]
+        existingImageUrls?: string[],
+        shouldClose: boolean = true // Novo argumento
     ) => {
         try {
             if (isEditing && vehicleId) {
@@ -111,7 +112,16 @@ const Vehicles: React.FC = () => {
             } else {
                 await createVehicle(vehicleData, imageFiles);
             }
-            await loadData();
+            
+            // Se shouldClose for false, o formulário será resetado, mas o modal permanece aberto.
+            // Se shouldClose for true, o modal será fechado pelo VehicleForm.
+            if (shouldClose) {
+                await loadData();
+            } else {
+                // Se não fechar, apenas recarrega os dados em segundo plano para atualizar a lista
+                // (Embora o usuário não veja a lista, é bom manter o estado sincronizado)
+                await loadData();
+            }
         } catch (error) {
             throw error;
         }
