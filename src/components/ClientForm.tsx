@@ -127,7 +127,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Nenhuma validação mínima obrigatória. O usuário pode salvar um cliente vazio.
+        // Validação mínima para campos NOT NULL no DB
+        if (!formData.name.trim() || !formData.cpf_cnpj.trim()) {
+            alert('Nome/Razão Social e CPF/CNPJ são obrigatórios para salvar o cliente.');
+            return;
+        }
         
         setIsLoading(true);
 
@@ -148,9 +152,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             }
             
             onCancel();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Erro ao salvar cliente:", error);
-            alert('Erro ao salvar cliente. Verifique o console para mais detalhes.');
+            // Tentativa de extrair a mensagem de erro do Supabase
+            const errorMessage = error.message || 'Erro desconhecido.';
+            alert(`Erro ao salvar cliente: ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }
@@ -191,14 +197,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'}</label>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'} <span className="text-red-500">*</span></label>
                 <UppercaseInput 
                     type="text" 
                     name="name" 
                     id="name" 
                     value={formData.name} 
                     onChange={handleChange} 
-                    // required removido
                 />
             </div>
 
@@ -228,7 +233,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                         id="phone" 
                         value={formData.phone} 
                         onChange={handleChange} 
-                        // required removido
                     />
                 </div>
             </div>
@@ -291,14 +295,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
             <div>
-                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'}</label>
+                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'} <span className="text-red-500">*</span></label>
                 <UppercaseInput 
                     type="text" 
                     name="cpf_cnpj" 
                     id="cpf_cnpj" 
                     value={formData.cpf_cnpj} 
                     onChange={handleChange} 
-                    // required removido
                 />
             </div>
 
