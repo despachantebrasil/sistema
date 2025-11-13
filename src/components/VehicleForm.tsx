@@ -173,7 +173,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
     ];
     
     const categoryOptions = [
-        'PARTICULAR', 'ALUGUEL', 'OFICIAL', 'APRENDIZAGEM', 'COLEÇÃO', 'EXPERIÊNCIA/FABRICANTE'
+        'PARTICULAR', 'ALUGUEL', 'OFICIAL', 'APRENDIZAGEM', 'COLEÇÃO', 'EXPERIÊNCIA/FABRICANTE', 'FROTA' // Adicionado 'FROTA'
     ];
 
     return (
