@@ -159,17 +159,17 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                         </div>
                     </div>
                     <div>
-                        <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700">Contato do Responsável (Telefone ou *)</label>
-                        <UppercaseInput type="text" id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="Ex: (11) 99999-9999 ou *" disabled={isLoading} />
+                        <label className="block text-sm font-medium text-gray-700">Próximo Agendamento</label>
+                        <div className="flex items-center gap-2 mt-1">
+                            <input type="date" id="nextScheduleDate" value={nextScheduleDate} onChange={(e) => setNextScheduleDate(e.target.value)} className={inputClasses + ' w-full p-2'} disabled={isLoading} />
+                            <input type="time" id="nextScheduleTime" value={nextScheduleTime} onChange={(e) => setNextScheduleTime(e.target.value)} className={inputClasses + ' w-full p-2'} disabled={isLoading} />
+                        </div>
                     </div>
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Próximo Agendamento</label>
-                    <div className="flex items-center gap-2 mt-1">
-                        <input type="date" id="nextScheduleDate" value={nextScheduleDate} onChange={(e) => setNextScheduleDate(e.target.value)} className={inputClasses + ' w-full p-2'} disabled={isLoading} />
-                        <input type="time" id="nextScheduleTime" value={nextScheduleTime} onChange={(e) => setNextScheduleTime(e.target.value)} className={inputClasses + ' w-full p-2'} disabled={isLoading} />
-                    </div>
+                    <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700">Contato do Responsável (Telefone ou *)</label>
+                    <UppercaseInput type="text" id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="Ex: (11) 99999-9999 ou *" disabled={isLoading} />
                 </div>
                 
                 <div>
