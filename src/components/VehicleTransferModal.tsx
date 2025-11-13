@@ -134,15 +134,10 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
 
             <div className="space-y-4 border-t pt-4">
                 <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Detalhes do Serviço e Agendamento</h4>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700">Valor do Serviço (R$)</label>
-                        <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClasses} required step="0.01" min="0" disabled={isLoading} />
-                    </div>
-                    <div>
-                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">Prazo Final do Serviço</label>
-                        <input type="date" id="dueDate" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClasses} required disabled={isLoading} />
-                    </div>
+                
+                <div>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Valor do Serviço (R$)</label>
+                    <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClasses} required step="0.01" min="0" disabled={isLoading} />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -156,14 +151,16 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                     </div>
                 </div>
                 
-                {/* NOVO GRID PARA PRÓXIMO AGENDAMENTO */}
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="nextScheduleDate" className="block text-sm font-medium text-gray-700">Próximo Agendamento (Data)</label>
                         <input type="date" id="nextScheduleDate" value={nextScheduleDate} onChange={(e) => setNextScheduleDate(e.target.value)} className={inputClasses} disabled={isLoading} />
                     </div>
+                    <div>
+                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">Prazo Final do Serviço</label>
+                        <input type="date" id="dueDate" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClasses} required disabled={isLoading} />
+                    </div>
                 </div>
-                {/* FIM DO NOVO GRID */}
                 
                 <div>
                     <label htmlFor="situationNotes" className="block text-sm font-medium text-gray-700">Situação Inicial / Pendências</label>
