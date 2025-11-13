@@ -36,6 +36,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
         contact_phone: service?.contact_phone || '',
         payment_status: service?.payment_status || 'Pendente',
         situation_notes: service?.situation_notes || '',
+        next_schedule_date: service?.next_schedule_date || '', // NOVO CAMPO
     });
     const [isLoading, setIsLoading] = useState(false);
 
@@ -48,6 +49,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                 contact_phone: service.contact_phone || '',
                 payment_status: service.payment_status || 'Pendente',
                 situation_notes: service.situation_notes || '',
+                next_schedule_date: service.next_schedule_date || '', // NOVO CAMPO
             });
             setIsEditing(false);
         }
@@ -80,6 +82,8 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                 contact_phone: formData.contact_phone.toUpperCase(),
                 payment_status: formData.payment_status as 'Pago' | 'Pendente',
                 situation_notes: formData.situation_notes,
+                // Corrigindo a tipagem: se for string vazia, passa undefined (que é compatível com o tipo opcional)
+                next_schedule_date: formData.next_schedule_date || undefined, 
             };
             
             await updateService(service.id, updatePayload);
@@ -162,9 +166,15 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                                 </div>
                             </div>
                             
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Horário Agendado DETRAN</label>
-                                <input type="time" name="detran_schedule_time" value={formData.detran_schedule_time} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Horário Agendado DETRAN</label>
+                                    <input type="time" name="detran_schedule_time" value={formData.detran_schedule_time} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Próximo Agendamento (Data)</label>
+                                    <input type="date" name="next_schedule_date" value={formData.next_schedule_date} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                                </div>
                             </div>
                             
                             <div>
@@ -185,6 +195,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                             <DetailItem label="Responsável" value={service.agent_name} />
                             <DetailItem label="Contato" value={service.contact_phone} />
                             <DetailItem label="Agendamento DETRAN" value={service.detran_schedule_time || '-'} />
+                            <DetailItem label="Próximo Agendamento" value={service.next_schedule_date ? new Date(service.next_schedule_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'} />
                             <DetailItem label="Notas da Situação" value={service.situation_notes} />
                         </div>
                     )}

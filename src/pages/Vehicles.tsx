@@ -154,7 +154,8 @@ const Vehicles: React.FC = () => {
         detranScheduleTime: string,
         contactPhone: string,
         paymentStatus: 'Pago' | 'Pendente',
-        situationNotes: string
+        situationNotes: string,
+        nextScheduleDate: string // NOVO ARGUMENTO
     ) => {
         if (!vehicleToTransfer) return;
         try {
@@ -169,7 +170,8 @@ const Vehicles: React.FC = () => {
                 detranScheduleTime,
                 contactPhone,
                 paymentStatus,
-                situationNotes
+                situationNotes,
+                nextScheduleDate // PASSANDO O NOVO ARGUMENTO
             );
             setIsTransferModalOpen(false);
             setVehicleToTransfer(null);

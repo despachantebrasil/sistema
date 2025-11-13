@@ -79,6 +79,7 @@ export interface Service {
   contact_phone?: string; // Novo campo: Contato do responsável
   payment_status?: 'Pago' | 'Pendente'; // Novo campo: Status de pagamento
   situation_notes?: string; // Novo campo: Notas sobre a situação
+  next_schedule_date?: string; // NOVO CAMPO: Próximo agendamento (data)
   created_at: string;
 }
 

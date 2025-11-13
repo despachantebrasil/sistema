@@ -393,7 +393,8 @@ export const transferVehicle = async (
     detranScheduleTime: string,
     contactPhone: string,
     paymentStatus: 'Pago' | 'Pendente',
-    situationNotes: string
+    situationNotes: string,
+    nextScheduleDate: string // NOVO PARÂMETRO
 ): Promise<void> => {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error("Usuário não autenticado.");
@@ -414,6 +415,7 @@ export const transferVehicle = async (
         contact_phone: contactPhone || null,
         payment_status: paymentStatus,
         situation_notes: situationNotes || null,
+        next_schedule_date: nextScheduleDate || null, // SALVANDO O NOVO CAMPO
     };
     const { data: newService, error: serviceError } = await supabase
         .from('services')

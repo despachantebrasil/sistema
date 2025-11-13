@@ -15,7 +15,8 @@ interface VehicleTransferModalProps {
         detranScheduleTime: string,
         contactPhone: string,
         paymentStatus: 'Pago' | 'Pendente',
-        situationNotes: string
+        situationNotes: string,
+        nextScheduleDate: string // NOVO CAMPO
     ) => Promise<void>;
     onCancel: () => void;
 }
@@ -40,6 +41,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
     const [contactPhone, setContactPhone] = useState<string>('');
     const [paymentStatus, setPaymentStatus] = useState<'Pago' | 'Pendente'>('Pendente');
     const [situationNotes, setSituationNotes] = useState<string>('');
+    const [nextScheduleDate, setNextScheduleDate] = useState<string>(''); // NOVO ESTADO
     
     const [isLoading, setIsLoading] = useState(false);
 
@@ -68,7 +70,8 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 detranScheduleTime,
                 contactPhone,
                 paymentStatus,
-                situationNotes
+                situationNotes,
+                nextScheduleDate // PASSANDO O NOVO CAMPO
             );
         } catch (error) {
             console.error("Erro ao confirmar transferência:", error);
@@ -152,6 +155,15 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                         <UppercaseInput type="text" id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="Ex: (11) 99999-9999 ou *" disabled={isLoading} />
                     </div>
                 </div>
+                
+                {/* NOVO GRID PARA PRÓXIMO AGENDAMENTO */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="nextScheduleDate" className="block text-sm font-medium text-gray-700">Próximo Agendamento (Data)</label>
+                        <input type="date" id="nextScheduleDate" value={nextScheduleDate} onChange={(e) => setNextScheduleDate(e.target.value)} className={inputClasses} disabled={isLoading} />
+                    </div>
+                </div>
+                {/* FIM DO NOVO GRID */}
                 
                 <div>
                     <label htmlFor="situationNotes" className="block text-sm font-medium text-gray-700">Situação Inicial / Pendências</label>
