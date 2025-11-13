@@ -194,12 +194,12 @@ const Clients: React.FC = () => {
 
             <Modal 
                 isOpen={isFormModalOpen} 
-                onClose={() => { /* Ignora clique externo */ }} // Passa uma função vazia para desabilitar o fechamento por clique externo
+                onClose={handleCloseFormModal} // Revertido para a função de fechar
                 title={editingClient ? "Editar Cliente" : "Adicionar Novo Cliente"}
             >
                 <ClientForm
                     onSave={handleSaveClient}
-                    onCancel={handleCloseFormModal} // O botão Cancelar ainda usa a função de fechar
+                    onCancel={handleCloseFormModal}
                     client={editingClient || undefined}
                 />
             </Modal>
