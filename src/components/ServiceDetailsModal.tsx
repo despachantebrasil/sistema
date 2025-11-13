@@ -168,13 +168,22 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                             
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Horário Agendado DETRAN</label>
-                                    <input type="time" name="detran_schedule_time" value={formData.detran_schedule_time} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
-                                </div>
-                                <div>
                                     <label className="block text-sm font-medium text-gray-700">Próximo Agendamento (Data)</label>
                                     <input type="date" name="next_schedule_date" value={formData.next_schedule_date} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Prazo Final do Serviço</label>
+                                    <input type="date" name="due_date" value={service.due_date} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-gray-100 cursor-not-allowed" />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Horário Agendado DETRAN</label>
+                                    <input type="time" name="detran_schedule_time" value={formData.detran_schedule_time} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                                </div>
+                                {/* Espaço vazio para manter o layout de 2 colunas, se necessário, ou remover este div se não houver outro campo */}
+                                <div></div> 
                             </div>
                             
                             <div>
@@ -196,6 +205,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                             <DetailItem label="Contato" value={service.contact_phone} />
                             <DetailItem label="Agendamento DETRAN" value={service.detran_schedule_time || '-'} />
                             <DetailItem label="Próximo Agendamento" value={service.next_schedule_date ? new Date(service.next_schedule_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'} />
+                            <DetailItem label="Prazo Final do Serviço" value={new Date(service.due_date + 'T00:00:00').toLocaleDateString('pt-BR')} />
                             <DetailItem label="Notas da Situação" value={service.situation_notes} />
                         </div>
                     )}
