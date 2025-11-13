@@ -140,7 +140,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
     const paymentStatusOptions = ['Pendente', 'Pago'];
 
     return (
-        <Modal isOpen={!!service} onClose={onClose} title={`Detalhes do Serviço: ${service.name}`}>
+        <Modal isOpen={!!service} onClose={onClose} title={`Detalhes do Serviço: ${service.name}`} size="4xl">
             <div className="max-h-[70vh] overflow-y-auto pr-4 space-y-6">
                 
                 <div className="p-4 border rounded-lg bg-gray-50">

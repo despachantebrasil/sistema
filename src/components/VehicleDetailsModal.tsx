@@ -98,7 +98,7 @@ const VehicleDetailsModal: React.FC<VehicleDetailsModalProps> = ({ vehicle, onCl
   if (!vehicle) return null;
 
   return (
-    <Modal isOpen={!!vehicle} onClose={onClose} title="Detalhes do Veículo">
+    <Modal isOpen={!!vehicle} onClose={onClose} title="Detalhes do Veículo" size="3xl">
       <div className="max-h-[70vh] overflow-y-auto pr-4">
         <PrintableVehicleDetails vehicle={vehicle} />
 

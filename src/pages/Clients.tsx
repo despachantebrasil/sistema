@@ -194,8 +194,9 @@ const Clients: React.FC = () => {
 
             <Modal 
                 isOpen={isFormModalOpen} 
-                onClose={handleCloseFormModal} // Revertido para a função de fechar
+                onClose={handleCloseFormModal}
                 title={editingClient ? "Editar Cliente" : "Adicionar Novo Cliente"}
+                size="3xl"
             >
                 <ClientForm
                     onSave={handleSaveClient}

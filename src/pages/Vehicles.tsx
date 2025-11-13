@@ -268,7 +268,7 @@ const Vehicles: React.FC = () => {
                 onPrint={handlePrintVehicle}
             />
 
-            <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingVehicle ? "Editar Veículo" : "Adicionar Novo Veículo"}>
+            <Modal isOpen={isFormModalOpen} onClose={handleCloseFormModal} title={editingVehicle ? "Editar Veículo" : "Adicionar Novo Veículo"} size="3xl">
                 <VehicleForm 
                     onSave={handleSaveVehicle as any}
                     onCancel={handleCloseFormModal}
@@ -278,7 +278,7 @@ const Vehicles: React.FC = () => {
             </Modal>
 
             {vehicleToTransfer && (
-                <Modal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} title={`Transferir Veículo ${vehicleToTransfer.plate}`}>
+                <Modal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} title={`Transferir Veículo ${vehicleToTransfer.plate}`} size="3xl">
                     <VehicleTransferModal
                         vehicle={vehicleToTransfer}
                         clients={clients}
