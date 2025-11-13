@@ -74,53 +74,62 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     };
     
     const checkDocumentationStatus = (data: typeof formData, type: ClientType): ClientDocStatus => {
-        // Campos principais para Pessoa Física
-        let coreRequiredFields: (string | number | undefined)[] = [];
         
-        if (type === ClientType.INDIVIDUAL) {
-            coreRequiredFields = [data.name, data.phone, data.cpf_cnpj];
-        } else {
-            // Para Pessoa Jurídica, se todos os campos estiverem vazios, é PENDENTE.
-            // Se houver pelo menos o nome, é EM ANDAMENTO.
-            // Se todos os campos de detalhe estiverem preenchidos, é COMPLETO.
-            coreRequiredFields = [data.name, data.cpf_cnpj, data.phone];
-        }
-
-        // Se algum campo principal (para PF) ou se todos os campos (para PJ) estiverem faltando, o status é PENDENTE
-        if (coreRequiredFields.every(field => !field || (typeof field === 'string' && field.trim() === ''))) {
-             // Se for PJ e tudo estiver vazio, é PENDENTE.
-             if (type === ClientType.COMPANY) return ClientDocStatus.PENDING;
-             // Se for PF e faltar algum core, é PENDENTE.
-             if (coreRequiredFields.some(field => !field || (typeof field === 'string' && field.trim() === ''))) return ClientDocStatus.PENDING;
-        }
-        
-        // 2. Campos de detalhe para status COMPLETO
-        let detailFields: (string | number | undefined)[] = [data.address];
+        // 1. Coleta todos os campos que indicam preenchimento
+        let allFields: (string | number | undefined)[] = [
+            data.name, data.phone, data.cpf_cnpj, data.email, data.address
+        ];
 
         if (type === ClientType.INDIVIDUAL) {
-            detailFields = detailFields.concat([
+            allFields = allFields.concat([
+                data.marital_status,
+                data.profession,
+                data.nationality,
+                data.naturalness,
+                // CNH e Vencimento CNH são opcionais e não contam para o status COMPLETED
+            ]);
+        } else if (type === ClientType.COMPANY) {
+            allFields = allFields.concat([
+                data.trade_name,
+                data.contact_name,
+            ]);
+        }
+        
+        // Verifica se *todos* os campos estão vazios
+        const allEmpty = allFields.every(field => !field || (typeof field === 'string' && field.trim() === ''));
+
+        if (allEmpty) {
+            return ClientDocStatus.PENDING;
+        }
+        
+        // Se houver algum dado, mas nem todos os campos de detalhe estiverem preenchidos, é EM ANDAMENTO.
+        // Para simplificar, se não estiver PENDENTE, é IN_PROGRESS, a menos que todos os campos relevantes estejam preenchidos.
+        
+        // Campos necessários para atingir COMPLETED (excluindo CNH, que é opcional)
+        let completedFields: (string | number | undefined)[] = [
+            data.name, data.phone, data.cpf_cnpj, data.address
+        ];
+
+        if (type === ClientType.INDIVIDUAL) {
+            completedFields = completedFields.concat([
                 data.marital_status,
                 data.profession,
                 data.nationality,
                 data.naturalness,
             ]);
         } else if (type === ClientType.COMPANY) {
-            // Para PJ, os campos principais também contam como detalhes para atingir COMPLETED
-            detailFields = detailFields.concat([
-                data.name,
-                data.cpf_cnpj,
-                data.phone,
+            completedFields = completedFields.concat([
                 data.trade_name,
                 data.contact_name,
             ]);
         }
         
-        // Se algum campo de detalhe estiver faltando (ou for uma string vazia), o status é EM ANDAMENTO
-        if (detailFields.some(field => !field || (typeof field === 'string' && field.trim() === ''))) {
+        // Se algum campo necessário para COMPLETED estiver faltando, é EM ANDAMENTO
+        if (completedFields.some(field => !field || (typeof field === 'string' && field.trim() === ''))) {
             return ClientDocStatus.IN_PROGRESS;
         }
         
-        // Se todos os campos principais e de detalhe estiverem preenchidos
+        // Se todos os campos relevantes estiverem preenchidos
         return ClientDocStatus.COMPLETED;
     };
 
@@ -128,13 +137,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Validação mínima para Pessoa Física
-        if (clientType === ClientType.INDIVIDUAL && (!formData.name || !formData.phone || !formData.cpf_cnpj)) {
-            alert('Para Pessoa Física, Nome, CPF e Telefone são obrigatórios.');
-            return;
-        }
-        
-        // Para Pessoa Jurídica, permitimos salvar mesmo que todos os campos estejam vazios.
+        // Nenhuma validação mínima obrigatória. O usuário pode salvar um cliente vazio.
         
         setIsLoading(true);
 
@@ -165,12 +168,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
 
     const maritalStatusOptions = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'Outro'];
     
-    // Função auxiliar para determinar se o campo é obrigatório (apenas para PF)
-    const isRequired = () => clientType === ClientType.INDIVIDUAL;
-    
-    // Função auxiliar para renderizar o asterisco
-    const renderRequiredStar = () => isRequired() ? <span className="text-red-500">*</span> : null;
-
+    // Funções de obrigatoriedade removidas, pois não há campos obrigatórios.
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
@@ -203,14 +201,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'} {renderRequiredStar()}</label>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'}</label>
                 <UppercaseInput 
                     type="text" 
                     name="name" 
                     id="name" 
                     value={formData.name} 
                     onChange={handleChange} 
-                    required={isRequired()} 
+                    // required removido
                 />
             </div>
 
@@ -230,18 +228,17 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail</label>
-                    {/* E-mail não é mais required */}
                     <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                 </div>
                 <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone {renderRequiredStar()}</label>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Telefone</label>
                     <UppercaseInput 
                         type="tel" 
                         name="phone" 
                         id="phone" 
                         value={formData.phone} 
                         onChange={handleChange} 
-                        required={isRequired()} 
+                        // required removido
                     />
                 </div>
             </div>
@@ -275,12 +272,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="cnh_number" className="block text-sm font-medium text-gray-700">Nº Registro CNH</label>
-                            {/* Removido 'required' */}
                             <UppercaseInput type="text" name="cnh_number" id="cnh_number" value={formData.cnh_number} onChange={handleChange} />
                         </div>
                         <div>
                             <label htmlFor="cnh_expiration_date" className="block text-sm font-medium text-gray-700">Vencimento CNH</label>
-                            {/* Removido 'required' */}
                             <input type="date" name="cnh_expiration_date" id="cnh_expiration_date" value={formData.cnh_expiration_date} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
                         </div>
                     </div>
@@ -306,14 +301,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
             <div>
-                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'} {renderRequiredStar()}</label>
+                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'}</label>
                 <UppercaseInput 
                     type="text" 
                     name="cpf_cnpj" 
                     id="cpf_cnpj" 
                     value={formData.cpf_cnpj} 
                     onChange={handleChange} 
-                    required={isRequired()} 
+                    // required removido
                 />
             </div>
 
