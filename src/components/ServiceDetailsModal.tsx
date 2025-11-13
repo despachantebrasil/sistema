@@ -140,6 +140,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
 
                     {isEditing ? (
                         <div className="space-y-4">
+                            {/* GRID 1: Status e Pagamento */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Status Atual</label>
@@ -155,6 +156,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                                 </div>
                             </div>
                             
+                            {/* GRID 2: Responsável e Contato */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Responsável (Despachante)</label>
@@ -166,6 +168,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                                 </div>
                             </div>
                             
+                            {/* GRID 3: Próximo Agendamento e Prazo Final */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Próximo Agendamento (Data)</label>
@@ -177,12 +180,12 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                                 </div>
                             </div>
 
+                            {/* GRID 4: Horário DETRAN */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Horário Agendado DETRAN</label>
                                     <input type="time" name="detran_schedule_time" value={formData.detran_schedule_time} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
                                 </div>
-                                {/* Espaço vazio para manter o layout de 2 colunas, se necessário, ou remover este div se não houver outro campo */}
                                 <div></div> 
                             </div>
                             
@@ -203,9 +206,9 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                             <DetailItem label="Status Pagamento" value={service.payment_status || 'N/A'} />
                             <DetailItem label="Responsável" value={service.agent_name} />
                             <DetailItem label="Contato" value={service.contact_phone} />
-                            <DetailItem label="Agendamento DETRAN" value={service.detran_schedule_time || '-'} />
                             <DetailItem label="Próximo Agendamento" value={service.next_schedule_date ? new Date(service.next_schedule_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'} />
                             <DetailItem label="Prazo Final do Serviço" value={new Date(service.due_date + 'T00:00:00').toLocaleDateString('pt-BR')} />
+                            <DetailItem label="Agendamento DETRAN" value={service.detran_schedule_time || '-'} />
                             <DetailItem label="Notas da Situação" value={service.situation_notes} />
                         </div>
                     )}
