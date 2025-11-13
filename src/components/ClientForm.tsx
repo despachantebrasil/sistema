@@ -275,18 +275,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                     </div>
                 </>
             ) : (
-                <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="trade_name" className="block text-sm font-medium text-gray-700">Nome Fantasia</label>
-                            <UppercaseInput type="text" name="trade_name" id="trade_name" value={formData.trade_name} onChange={handleChange} />
-                        </div>
-                        <div>
-                            <label htmlFor="contact_name" className="block text-sm font-medium text-gray-700">Nome do Contato</label>
-                            <UppercaseInput type="text" name="contact_name" id="contact_name" value={formData.contact_name} onChange={handleChange} />
-                        </div>
-                    </div>
-                </>
+                // Este bloco estava duplicando os campos de PJ
+                null
             )}
             
              <div>
