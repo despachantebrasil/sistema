@@ -37,21 +37,24 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
         payment_status: 'Pendente',
         situation_notes: '',
         next_schedule_date: '',
+        next_schedule_time: '',
     });
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (service) {
             setCurrentStatus(service.status);
-            const [datePart, timePart] = (service.detran_schedule_time || ' ').split(' ');
+            const [detranDatePart, detranTimePart] = (service.detran_schedule_time || ' ').split(' ');
+            const [nextDatePart, nextTimePart] = (service.next_schedule_date || ' ').split(' ');
             setFormData({
                 agent_name: service.agent_name || '',
-                detran_schedule_date: datePart.trim(),
-                detran_schedule_time: timePart?.trim() || '',
+                detran_schedule_date: detranDatePart.trim(),
+                detran_schedule_time: detranTimePart?.trim() || '',
                 contact_phone: service.contact_phone || '',
                 payment_status: service.payment_status || 'Pendente',
                 situation_notes: service.situation_notes || '',
-                next_schedule_date: service.next_schedule_date || '',
+                next_schedule_date: nextDatePart.trim(),
+                next_schedule_time: nextTimePart?.trim() || '',
             });
             setIsEditing(false);
         }
@@ -80,6 +83,10 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
             const combinedDetranSchedule = formData.detran_schedule_date 
                 ? `${formData.detran_schedule_date} ${formData.detran_schedule_time || ''}`.trim() 
                 : '';
+            
+            const combinedNextSchedule = formData.next_schedule_date
+                ? `${formData.next_schedule_date} ${formData.next_schedule_time || ''}`.trim()
+                : '';
 
             const updatePayload = {
                 status: currentStatus,
@@ -88,7 +95,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                 contact_phone: formData.contact_phone.toUpperCase(),
                 payment_status: formData.payment_status as 'Pago' | 'Pendente',
                 situation_notes: formData.situation_notes,
-                next_schedule_date: formData.next_schedule_date || undefined, 
+                next_schedule_date: combinedNextSchedule || undefined, 
             };
             
             await updateService(service.id, updatePayload);
@@ -114,7 +121,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
         return <span className={`px-3 py-1 text-sm font-semibold rounded-full ${className}`}>{status}</span>;
     };
 
-    const formatDetranSchedule = (schedule?: string) => {
+    const formatSchedule = (schedule?: string) => {
         if (!schedule || !schedule.trim()) return '-';
         const [datePart, timePart] = schedule.split(' ');
         
@@ -200,8 +207,11 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700">Próximo Agendamento (Data)</label>
-                                    <input type="date" name="next_schedule_date" value={formData.next_schedule_date} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                                    <label className="block text-sm font-medium text-gray-700">Próximo Agendamento</label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <input type="date" name="next_schedule_date" value={formData.next_schedule_date} onChange={handleFormChange} className="w-full mt-1 block px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                                        <input type="time" name="next_schedule_time" value={formData.next_schedule_time} onChange={handleFormChange} className="w-full mt-1 block px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" disabled={isLoading} />
+                                    </div>
                                 </div>
                             </div>
                             
@@ -222,8 +232,8 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                             <DetailItem label="Status Pagamento" value={service.payment_status || 'N/A'} />
                             <DetailItem label="Responsável" value={service.agent_name} />
                             <DetailItem label="Contato" value={service.contact_phone} />
-                            <DetailItem label="Agendamento DETRAN" value={formatDetranSchedule(service.detran_schedule_time)} />
-                            <DetailItem label="Próximo Agendamento" value={service.next_schedule_date ? new Date(service.next_schedule_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'} />
+                            <DetailItem label="Agendamento DETRAN" value={formatSchedule(service.detran_schedule_time)} />
+                            <DetailItem label="Próximo Agendamento" value={formatSchedule(service.next_schedule_date)} />
                             <DetailItem label="Prazo Final do Serviço" value={new Date(service.due_date + 'T00:00:00').toLocaleDateString('pt-BR')} />
                             <DetailItem label="Notas da Situação" value={service.situation_notes} />
                         </div>

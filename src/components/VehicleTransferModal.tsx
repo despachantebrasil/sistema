@@ -42,7 +42,8 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
     const [contactPhone, setContactPhone] = useState<string>('');
     const [paymentStatus, setPaymentStatus] = useState<'Pago' | 'Pendente'>('Pendente');
     const [situationNotes, setSituationNotes] = useState<string>('');
-    const [nextScheduleDate, setNextScheduleDate] = useState<string>(''); // NOVO ESTADO
+    const [nextScheduleDate, setNextScheduleDate] = useState<string>('');
+    const [nextScheduleTime, setNextScheduleTime] = useState<string>('');
     
     const [isLoading, setIsLoading] = useState(false);
 
@@ -62,8 +63,10 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
         setIsLoading(true);
         try {
             const combinedDetranSchedule = detranScheduleDate ? `${detranScheduleDate} ${detranScheduleTime || ''}`.trim() : '';
+            const combinedNextSchedule = nextScheduleDate ? `${nextScheduleDate} ${nextScheduleTime || ''}`.trim() : '';
+            
             await onConfirm(
-                Number(sellerId), // Passando o ID do Vendedor
+                Number(sellerId),
                 Number(newOwnerId), 
                 parseFloat(price), 
                 dueDate, 
@@ -73,7 +76,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 contactPhone,
                 paymentStatus,
                 situationNotes,
-                nextScheduleDate // PASSANDO O NOVO CAMPO
+                combinedNextSchedule
             );
         } catch (error) {
             console.error("Erro ao confirmar transferência:", error);
@@ -162,8 +165,11 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 </div>
                 
                 <div>
-                    <label htmlFor="nextScheduleDate" className="block text-sm font-medium text-gray-700">Próximo Agendamento (Data)</label>
-                    <input type="date" id="nextScheduleDate" value={nextScheduleDate} onChange={(e) => setNextScheduleDate(e.target.value)} className={inputClasses} disabled={isLoading} />
+                    <label className="block text-sm font-medium text-gray-700">Próximo Agendamento</label>
+                    <div className="flex items-center gap-2 mt-1">
+                        <input type="date" id="nextScheduleDate" value={nextScheduleDate} onChange={(e) => setNextScheduleDate(e.target.value)} className={inputClasses + ' w-full p-2'} disabled={isLoading} />
+                        <input type="time" id="nextScheduleTime" value={nextScheduleTime} onChange={(e) => setNextScheduleTime(e.target.value)} className={inputClasses + ' w-full p-2'} disabled={isLoading} />
+                    </div>
                 </div>
                 
                 <div>
