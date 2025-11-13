@@ -75,9 +75,25 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     
     const checkDocumentationStatus = (data: typeof formData, type: ClientType): ClientDocStatus => {
         
-        // 1. Coleta todos os campos que indicam preenchimento
+        // Campos essenciais para atingir COMPLETED: Nome/Razão Social e CPF/CNPJ
+        const essentialFields: (string | number | undefined)[] = [
+            data.name, 
+            data.cpf_cnpj
+        ];
+        
+        // Verifica se os campos essenciais estão preenchidos
+        const essentialsFilled = essentialFields.every(field => 
+            !!field && (typeof field === 'string' && field.trim() !== '')
+        );
+
+        if (essentialsFilled) {
+            // Se os identificadores principais estiverem preenchidos, consideramos COMPLETED
+            return ClientDocStatus.COMPLETED;
+        }
+        
+        // 1. Coleta todos os campos (incluindo os essenciais) para verificar se está totalmente vazio
         let allFields: (string | number | undefined)[] = [
-            data.name, data.phone, data.cpf_cnpj, data.email, data.address
+            data.name, data.cpf_cnpj, data.phone, data.email, data.address
         ];
 
         if (type === ClientType.INDIVIDUAL) {
@@ -86,7 +102,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                 data.profession,
                 data.nationality,
                 data.naturalness,
-                // CNH e Vencimento CNH são opcionais e não contam para o status COMPLETED
+                data.cnh_number,
+                data.cnh_expiration_date,
             ]);
         } else if (type === ClientType.COMPANY) {
             allFields = allFields.concat([
@@ -102,35 +119,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             return ClientDocStatus.PENDING;
         }
         
-        // Se houver algum dado, mas nem todos os campos de detalhe estiverem preenchidos, é EM ANDAMENTO.
-        // Para simplificar, se não estiver PENDENTE, é IN_PROGRESS, a menos que todos os campos relevantes estejam preenchidos.
-        
-        // Campos necessários para atingir COMPLETED (excluindo CNH, que é opcional)
-        let completedFields: (string | number | undefined)[] = [
-            data.name, data.phone, data.cpf_cnpj, data.address
-        ];
-
-        if (type === ClientType.INDIVIDUAL) {
-            completedFields = completedFields.concat([
-                data.marital_status,
-                data.profession,
-                data.nationality,
-                data.naturalness,
-            ]);
-        } else if (type === ClientType.COMPANY) {
-            completedFields = completedFields.concat([
-                data.trade_name,
-                data.contact_name,
-            ]);
-        }
-        
-        // Se algum campo necessário para COMPLETED estiver faltando, é EM ANDAMENTO
-        if (completedFields.some(field => !field || (typeof field === 'string' && field.trim() === ''))) {
-            return ClientDocStatus.IN_PROGRESS;
-        }
-        
-        // Se todos os campos relevantes estiverem preenchidos
-        return ClientDocStatus.COMPLETED;
+        // Se não está COMPLETED e não está PENDENTE (ou seja, tem algum dado preenchido), está EM ANDAMENTO
+        return ClientDocStatus.IN_PROGRESS;
     };
 
 
