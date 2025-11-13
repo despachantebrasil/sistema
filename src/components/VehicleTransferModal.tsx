@@ -9,7 +9,6 @@ interface VehicleTransferModalProps {
         sellerId: number, // Novo: ID do Vendedor (Cliente que contrata o serviço)
         newOwnerId: number, 
         price: number, 
-        dueDate: string, 
         payerId: number, 
         agentName: string,
         detranScheduleTime: string,
@@ -32,7 +31,6 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
     const [sellerId, setSellerId] = useState<number | ''>(vehicle.owner_id); // Inicializa com o proprietário atual
     const [newOwnerId, setNewOwnerId] = useState<number | ''>('');
     const [price, setPrice] = useState<string>('');
-    const [dueDate, setDueDate] = useState<string>('');
     const [payerId, setPayerId] = useState<number | ''>(vehicle.owner_id);
     const [agentName, setAgentName] = useState<string>('');
     
@@ -51,8 +49,8 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!sellerId || !newOwnerId || !price || !dueDate || !payerId || !agentName) {
-            alert('Por favor, preencha todos os campos obrigatórios (Vendedor, Comprador, Valor, Prazo, Responsável).');
+        if (!sellerId || !newOwnerId || !price || !payerId || !agentName) {
+            alert('Por favor, preencha todos os campos obrigatórios (Vendedor, Comprador, Valor, Responsável).');
             return;
         }
         if (sellerId === newOwnerId) {
@@ -69,7 +67,6 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 Number(sellerId),
                 Number(newOwnerId), 
                 parseFloat(price), 
-                dueDate, 
                 Number(payerId), 
                 agentName,
                 combinedDetranSchedule,
@@ -139,14 +136,10 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
             <div className="space-y-4 border-t pt-4">
                 <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Detalhes do Serviço e Agendamento</h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="price" className="block text-sm font-medium text-gray-700">Valor do Serviço (R$)</label>
                         <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClasses} required step="0.01" min="0" disabled={isLoading} />
-                    </div>
-                    <div>
-                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">Prazo Final do Serviço</label>
-                        <input type="date" id="dueDate" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClasses} required disabled={isLoading} />
                     </div>
                     <div>
                         <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700">Contato do Responsável</label>

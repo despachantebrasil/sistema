@@ -145,33 +145,37 @@ const Vehicles: React.FC = () => {
     };
 
     const handleConfirmTransfer = async (
-        sellerId: number, // Novo argumento
+        sellerId: number,
         newOwnerId: number, 
         price: number, 
-        dueDate: string, 
         payerId: number, 
         agentName: string,
         detranScheduleTime: string,
         contactPhone: string,
         paymentStatus: 'Pago' | 'Pendente',
         situationNotes: string,
-        nextScheduleDate: string // NOVO ARGUMENTO
+        nextScheduleDate: string
     ) => {
         if (!vehicleToTransfer) return;
         try {
+            // Define o prazo final para 30 dias a partir de hoje
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+            const dueDateString = dueDate.toISOString().split('T')[0];
+
             await transferVehicle(
                 vehicleToTransfer, 
-                sellerId, // Passando o sellerId
+                sellerId,
                 newOwnerId, 
                 price, 
-                dueDate, 
+                dueDateString,
                 payerId, 
                 agentName,
                 detranScheduleTime,
                 contactPhone,
                 paymentStatus,
                 situationNotes,
-                nextScheduleDate // PASSANDO O NOVO ARGUMENTO
+                nextScheduleDate
             );
             setIsTransferModalOpen(false);
             setVehicleToTransfer(null);
