@@ -49,8 +49,8 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!sellerId || !newOwnerId || !price || !payerId || !agentName) {
-            alert('Por favor, preencha todos os campos obrigatórios (Vendedor, Comprador, Valor, Responsável).');
+        if (!sellerId || !newOwnerId || !payerId) {
+            alert('Por favor, selecione o Vendedor, o Comprador e quem será o Pagador do serviço.');
             return;
         }
         if (sellerId === newOwnerId) {
@@ -66,7 +66,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
             await onConfirm(
                 Number(sellerId),
                 Number(newOwnerId), 
-                parseFloat(price), 
+                parseFloat(price) || 0, // Default to 0 if price is empty
                 Number(payerId), 
                 agentName,
                 combinedDetranSchedule,
@@ -108,7 +108,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 <h4 className="font-semibold text-lg text-gray-800 border-b pb-2">Partes da Transferência</h4>
                 
                 <div>
-                    <label htmlFor="sellerId" className="block text-sm font-medium text-gray-700">Vendedor (Cliente que Contrata o Serviço)</label>
+                    <label htmlFor="sellerId" className="block text-sm font-medium text-gray-700">Vendedor (Cliente que Contrata o Serviço) <span className="text-red-500">*</span></label>
                     <select id="sellerId" value={sellerId} onChange={(e) => setSellerId(Number(e.target.value))} className={inputClasses} required disabled={isLoading}>
                         <option value="" disabled>Selecione um cliente...</option>
                         {allClients.map(client => (
@@ -118,7 +118,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 </div>
                 
                 <div>
-                    <label htmlFor="newOwnerId" className="block text-sm font-medium text-gray-700">Comprador (Novo Proprietário)</label>
+                    <label htmlFor="newOwnerId" className="block text-sm font-medium text-gray-700">Comprador (Novo Proprietário) <span className="text-red-500">*</span></label>
                     <select id="newOwnerId" value={newOwnerId} onChange={(e) => setNewOwnerId(Number(e.target.value))} className={inputClasses} required disabled={isLoading}>
                         <option value="" disabled>Selecione um cliente...</option>
                         {allClients.filter(c => c.id !== sellerId).map(client => (
@@ -129,7 +129,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 
                 <div>
                     <label htmlFor="agentName" className="block text-sm font-medium text-gray-700">Responsável pelo Processo (Despachante)</label>
-                    <UppercaseInput id="agentName" type="text" value={agentName} onChange={(e) => setAgentName(e.target.value)} required disabled={isLoading} placeholder="Nome do despachante ou empresa" />
+                    <UppercaseInput id="agentName" type="text" value={agentName} onChange={(e) => setAgentName(e.target.value)} disabled={isLoading} placeholder="Nome do despachante ou empresa" />
                 </div>
             </div>
 
@@ -139,7 +139,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="price" className="block text-sm font-medium text-gray-700">Valor do Serviço (R$)</label>
-                        <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClasses} required step="0.01" min="0" disabled={isLoading} />
+                        <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClasses} step="0.01" min="0" disabled={isLoading} />
                     </div>
                     <div>
                         <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700">Contato do Responsável</label>
@@ -171,7 +171,7 @@ const VehicleTransferModal: React.FC<VehicleTransferModalProps> = ({ vehicle, cl
                 
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Quem pagará pelo serviço?</label>
+                        <label className="block text-sm font-medium text-gray-700">Quem pagará pelo serviço? <span className="text-red-500">*</span></label>
                         <div className="mt-2 flex items-center space-x-4">
                             <label className="flex items-center">
                                 <input type="radio" name="payer" value={sellerId} checked={payerId === sellerId} onChange={() => setPayerId(Number(sellerId))} className="h-4 w-4 text-primary focus:ring-primary-dark" disabled={!sellerId} />
