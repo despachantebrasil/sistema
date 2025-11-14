@@ -194,7 +194,7 @@ const Services: React.FC = () => {
                 </div>
             </Card>
 
-            <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Adicionar Novo Serviço">
+            <Modal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} title="Adicionar Novo Serviço" size="3xl">
                 <ServiceForm 
                     onSave={handleAddService as (service: any) => Promise<void>} 
                     onCancel={() => setIsFormModalOpen(false)}
