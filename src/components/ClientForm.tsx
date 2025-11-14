@@ -127,12 +127,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Validação mínima para campos NOT NULL no DB
-        if (!formData.name.trim() || !formData.cpf_cnpj.trim()) {
-            alert('Nome/Razão Social e CPF/CNPJ são obrigatórios para salvar o cliente.');
-            return;
-        }
-        
         setIsLoading(true);
 
         try {
@@ -197,7 +191,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'} <span className="text-red-500">*</span></label>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'Nome Completo' : 'Razão Social'}</label>
                 <UppercaseInput 
                     type="text" 
                     name="name" 
@@ -285,7 +279,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
             </div>
 
             <div>
-                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'} <span className="text-red-500">*</span></label>
+                <label htmlFor="cpf_cnpj" className="block text-sm font-medium text-gray-700">{clientType === ClientType.INDIVIDUAL ? 'CPF' : 'CNPJ'}</label>
                 <UppercaseInput 
                     type="text" 
                     name="cpf_cnpj" 
