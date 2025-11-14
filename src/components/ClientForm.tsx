@@ -137,6 +137,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSave, onCancel, client }) => 
                 client_type: clientType,
                 doc_status: newDocStatus, // Adicionando o status calculado
                 avatar_url: avatarFile ? undefined : formData.avatar_url,
+                cnh_expiration_date: formData.cnh_expiration_date || undefined,
             } as ClientDataToSave;
             
             await onSave(clientDataToSave, avatarFile);

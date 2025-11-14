@@ -130,6 +130,7 @@ const VehicleForm: React.FC<VehicleFormProps> = ({ onSave, onCancel, clients, ve
                 year_manufacture: Number(formData.year_manufacture),
                 year_model: Number(formData.year_model),
                 owner_id: Number(formData.owner_id),
+                licensing_expiration_date: formData.licensing_expiration_date || undefined,
             };
 
             await onSave(

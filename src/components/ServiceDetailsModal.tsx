@@ -96,11 +96,11 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
         try {
             const combinedDetranSchedule = formData.detran_schedule_date 
                 ? `${formData.detran_schedule_date} ${formData.detran_schedule_time || ''}`.trim() 
-                : '';
+                : undefined;
             
             const combinedNextSchedule = formData.next_schedule_date
                 ? `${formData.next_schedule_date} ${formData.next_schedule_time || ''}`.trim()
-                : '';
+                : undefined;
 
             const updatePayload = {
                 status: currentStatus,
@@ -109,7 +109,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, clie
                 contact_phone: formData.contact_phone.toUpperCase(),
                 payment_status: formData.payment_status as 'Pago' | 'Pendente',
                 situation_notes: formData.situation_notes,
-                next_schedule_date: combinedNextSchedule || undefined, 
+                next_schedule_date: combinedNextSchedule, 
             };
             
             await updateService(service.id, updatePayload);
