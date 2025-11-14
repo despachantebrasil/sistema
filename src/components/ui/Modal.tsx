@@ -6,13 +6,28 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
+  closeOnOverlayClick?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'lg' }) => {
+const Modal: React.FC<ModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    title, 
+    children, 
+    size = 'lg', 
+    closeOnOverlayClick = false // Alterado para 'false' como padrão
+}) => {
   if (!isOpen) return null;
 
-  const sizeClasses = {
+  const handleOverlayClick = () => {
+    if (closeOnOverlayClick) {
+      onClose();
+    }
+  };
+
+  const sizeClasses: Record<string, string> = {
+    sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
@@ -21,19 +36,24 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     '4xl': 'max-w-4xl',
   };
 
+  // Impede que o clique dentro do modal feche a janela
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 transition-opacity"
-      onClick={onClose}
+      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 transition-opacity"
+      onClick={handleOverlayClick}
     >
       <div 
-        className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} flex flex-col transform transition-transform`}
-        onClick={(e) => e.stopPropagation()}
+        className={`bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} z-10 transform transition-all`}
+        onClick={handleContentClick}
       >
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-bold text-dark-text">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 rounded-full">
-            <CloseIcon className="w-6 h-6" />
+          <h3 className="text-xl font-bold text-dark-text">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-full">
+            <CloseIcon className="w-5 h-5" />
           </button>
         </div>
         <div className="p-6">
